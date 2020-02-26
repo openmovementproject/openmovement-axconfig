@@ -9,7 +9,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "parcel src/index.html",
-    "build": "parcel build src/index.html --public-url ./ && del-cli dist/*.map dist/*.js dist/*.css"
+    "build": "parcel build src/index.html --public-url ./ --out-dir docs && del-cli docs/*.map docs/*.js docs/*.css"
   },
   "repository": {
     "type": "git",

@@ -13,6 +13,9 @@ Notes:
 * Consider file inspection to detect data
 -->
 
+<!--
+npm run build
+-->
 
 <!--
 
