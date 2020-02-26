@@ -1,0 +1,34 @@
+{
+  "name": "ax3-webconfig",
+  "version": "1.0.0",
+  "description": "AX3 Device Web Configuration",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "parcel src/index.html",
+    "build": "parcel build src/index.html --public-url ./ && del-cli dist/*.map dist/*.js dist/*.css"
+  },
+  "repository": {
+    "type": "git",
+    "url": "ssh://git@openlab.ncl.ac.uk:17150/dan.jackson/ax3webconfig.git"
+  },
+  "keywords": [
+    "AX3"
+  ],
+  "author": "Dan Jackson",
+  "license": "BSD-2-Clause",
+  "browserslist": [
+    "last 1 Chrome versions"
+  ],
+  "devDependencies": {
+    "del-cli": "^3.0.0",
+    "parcel-bundler": "^1.12.4",
+    "parcel-plugin-inline-source": "^1.0.0"
+  },
+  "dependencies": {
+    "test.js": "^1.0.0"
+  }
+}

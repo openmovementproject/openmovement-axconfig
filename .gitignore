@@ -1,0 +1,6 @@
+/csr.pem
+/key.pem
+/server.crt
+/dist
+/.cache
+/node_modules

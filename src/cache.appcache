@@ -1,0 +1,14 @@
+CACHE MANIFEST
+# v4
+
+# Cache (entries were prefixed with '/')
+CACHE:
+index.html
+
+# Access everything else from network if available
+NETWORK:
+*
+
+# Fallback content
+FALLBACK:
+# / fallback.html

@@ -1,0 +1,132 @@
+html {
+	font-family: sans-serif;
+	background: whitesmoke;
+	height: 100%;
+	width: 100%;
+}
+
+body {
+	margin: 0;
+	display: grid;
+	grid-template-rows: auto fit-content(35vh);
+	height: 100%;
+	width: 100%;
+}
+
+.main {
+	overflow: auto;
+	margin: 0.5em;
+}
+
+#output::-webkit-scrollbar {
+	width: 0.5em;
+}
+
+#output::-webkit-scrollbar-track {
+	box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
+}
+
+#output::-webkit-scrollbar-thumb {
+	background-color: darkgrey;
+	outline: 1px solid slategrey;
+}
+
+#output {
+	box-shadow: inset 4px 4px 10px #aaa;
+	background: white;
+	color: black;
+	margin-top: 1em;
+	font-family: monospace;
+	overflow-y: auto;
+	padding: 0.3em;
+	padding-right: 0;
+	border-radius: 4px;
+	height: 35vh;
+	display: none;
+}
+
+body.console #output {
+	display: block;
+}
+
+#output p {
+	font-size: 14px;
+	font-weight: bold;
+	padding: 0.2em;
+	margin: 0;
+}
+
+#output p:nth-child(odd) {
+	background: linear-gradient(to bottom, #3ee2, #3ee2 50%, #3992 50%, #3952);
+	background-size: 100% 2px;
+}
+
+.button {
+	box-shadow: inset 0px 1px 0px 0px #bbdaf7;
+	background: linear-gradient(to bottom, #79bbff 5%, #378de5 100%);
+	background-color: #79bbff;
+	border-radius: 6px;
+	border: 1px solid #84bbf3;
+	display: inline-block;
+	cursor: pointer;
+	color: #ffffff;
+	font-size: 15px;
+	padding: 10px 20px;
+	text-decoration: none;
+	text-shadow: 0px 1px 0px #528ecc;
+}
+
+.button:hover {
+	background: linear-gradient(to bottom, #378de5 5%, #79bbff 100%);
+	background-color: #378de5;
+}
+
+.button:active {
+	position: relative;
+	top: 2px;
+}
+
+form {
+	margin-bottom: 6pt;
+}
+
+fieldset {
+	margin-bottom: 6pt;
+	border-radius: 6pt;
+}
+
+fieldset div {
+	display: flex;
+	vertical-align: bottom;
+	margin-top: 0.2em;
+	margin-bottom: 0.2em;
+}
+
+fieldset label {
+	margin-left: 0.5em;
+	width: 5.5em;
+}
+
+fieldset input[type=text], fieldset input[type=number], fieldset input[type=datetime-local], fieldset output, fieldset meter , fieldset select {
+	flex-grow: 4;
+}
+
+#code {
+	font-size: 150%;
+}
+
+fieldset #battery {
+	flex-grow: 1;
+	margin-left: 0.5em;
+}
+
+fieldset output {
+	flex-grow: 4;
+}
+
+/* .device-connected */
+.disconnected { display: block; }
+.connected { display: none; }
+.device-connected .disconnected { display: none; }
+.device-connected .connected { display: block; }
+
