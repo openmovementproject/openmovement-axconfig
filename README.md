@@ -14,6 +14,10 @@ Notes:
 -->
 
 <!--
+
+https://digitalinteraction.github.io/openmovement-axconfig/
+https://config.openmovement.dev/
+
 npm run build
 -->
 
