@@ -36,10 +36,19 @@ import KeyInput from './key_input.mjs';
 import DeviceManager from './device_manager.mjs';
 
 window.addEventListener("error", function (e) {
-    console.log("ERROR: Unhandled error occurred: " + e.error.message);
-    console.log(JSON.stringify(e));
+    document.getElementById('warnings').appendChild(document.createTextNode('⚠️ Unhandled error.'));
+    console.error("ERROR: Unhandled error: " + (e.error && e.error.message ? e.error.message : e.error));
+    console.error(JSON.stringify(e));
     return false;
-})
+});
+
+window.addEventListener("unhandledrejection", function (e) {
+    document.getElementById('warnings').appendChild(document.createTextNode('⚠️ Unhandled promise rejection.'));
+    console.error("ERROR: Unhandled rejection: " + (e.error && e.error.message ? e.error.message : e.error));
+    console.error(JSON.stringify(e));
+    return false;
+});
+
 
 redirectConsole('#output');
 
@@ -47,6 +56,11 @@ let currentDevice = null;
 
 window.addEventListener('DOMContentLoaded', async (event) => {
     const deviceManager = new DeviceManager();
+
+    for (let warning of deviceManager.warnings) {
+        document.getElementById('warnings').appendChild(document.createTextNode('⚠️ ' + warning));
+    }
+
     const codeInput = '#code';
 
     const updateEnabled = () => {
@@ -119,6 +133,37 @@ window.addEventListener('DOMContentLoaded', async (event) => {
         document.querySelector('#stop').value = config.stop ? localTimeString(config.stop).slice(0, -7) : null;
         document.querySelector('#metadata').value = config.metadata;
         updateEnabled();
+    }
+
+    const getDuration = () => {
+        const days = parseFloat(document.querySelector('#duration_days').value);
+        const hours = parseFloat(document.querySelector('#duration_hours').value);
+        const minutes = parseFloat(document.querySelector('#duration_minutes').value);
+        const seconds = parseFloat(document.querySelector('#duration_seconds') ? document.querySelector('#duration_seconds').value : '0');
+        return (((days * 24 + hours) * 60 + minutes) * 60 + seconds) * 1000;
+    }
+
+    const stopChanged = () => {
+        // Recalculate duration
+        const start = localTimeValue(document.querySelector('#start').value);
+        const stop = localTimeValue(document.querySelector('#stop').value);
+        const duration = stop.getTime() - start.getTime();
+        const duration_days = Math.floor(duration / 1000 / 60 / 60 / 24);
+        const duration_hours = Math.floor((duration / 1000 - (24 * 60 * 60 * duration_days)) / 60 / 60);
+        const duration_minutes = Math.floor((duration / 1000 - (24 * 60 * 60 * duration_days + 60 * 60 * duration_hours)) / 60);
+        const duration_seconds = duration / 1000 - (24 * 60 * 60 * duration_days + 60 * 60 * duration_hours + 60 * duration_minutes);
+        document.querySelector('#duration_days').value = duration_days;
+        document.querySelector('#duration_hours').value = duration_hours;
+        document.querySelector('#duration_minutes').value = duration_minutes;
+        if (document.querySelector('#duration_seconds')) document.querySelector('#duration_seconds').value = duration_seconds;
+    }
+
+    const durationChanged = () => {
+        // Recalculate stop
+        const start = localTimeValue(document.querySelector('#start').value);
+        const duration = getDuration();
+        const stop = new Date(start.getTime() + duration);
+        document.querySelector('#stop').value = localTimeString(stop).slice(0, -7);
     }
 
     const configFromForm = () => {
@@ -211,6 +256,7 @@ window.addEventListener('DOMContentLoaded', async (event) => {
             metadata: 'Hello_world!',
         };
         updateForm(config);
+        stopChanged();
     });
 
     watchParameters((params) => {
@@ -222,13 +268,35 @@ window.addEventListener('DOMContentLoaded', async (event) => {
         }
     });
 
-    for (let input of ['#session-id', '#rate', '#range', '#start', '#stop', '#metadata']) {
+    for (let input of ['#session-id', '#rate', '#range', '#start', '#duration_days', '#duration_hours', '#duration_minutes', '#duration_seconds', '#stop', '#metadata']) {
         const elem = document.querySelector(input);
+        if (!elem) {
+            if (input === '#duration_seconds') continue;
+            throw 'Element not found: ' + input;
+        }
         elem.addEventListener('change', updateEnabled);
         elem.addEventListener('input', updateEnabled);
         elem.addEventListener('propertychange', updateEnabled);
     }
 
+    for (let input of ['#duration_days', '#duration_hours', '#duration_minutes', '#duration_seconds']) {
+        const elem = document.querySelector(input);
+        if (!elem) {
+            if (input === '#duration_seconds') continue;
+            throw 'Element not found: ' + input;
+        }
+        elem.addEventListener('change', durationChanged);
+        elem.addEventListener('input', durationChanged);
+        //elem.addEventListener('propertychange', updateEnabled);
+    }
+
+    for (let input of ['#stop']) {
+        const elem = document.querySelector(input);
+        elem.addEventListener('change', stopChanged);
+        elem.addEventListener('input', stopChanged);
+        //elem.addEventListener('propertychange', updateEnabled);
+    }
+
     clearConfig();
-    
+   
 });

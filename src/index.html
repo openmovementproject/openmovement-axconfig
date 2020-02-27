@@ -22,13 +22,15 @@ Device
 <body>
 <div class="main">
   <h1>AX3 Configure</h1>
+  <div id="warnings"><ul>
+    <noscript>⚠️ Scripting not enabled.</noscript>
+  </div>
   <form>
     <fieldset>
       <legend>Configuration</legend>
       <div><label accesskey="C" for="code">Code: </label><input id="code" type="text" placeholder="..."></div>
       <div><output id="result" value="-"></output></div>
-      <div><input id="test" type="button" value="Use Test Data"></div>
-      <details>
+      <details open>
         <summary>Details</summary>
         <div><label for="session-id">Session ID: </label><input id="session-id" type="number" placeholder="(none)"></div>
         <div><label for="rate">Rate: </label>
@@ -54,14 +56,19 @@ Device
         </div>
         <div><label for="metadata">Metadata: </label><input id="metadata" type="text" placeholder="(none)"></div>
         <div><label for="start">Start: </label><input id="start" type="datetime-local"></div>
+        <div><label for="duration_days">Duration: </label>
+          <input id="duration_days" type="number" min="0" placeholder="days">&nbsp;day(s)&nbsp;&nbsp;
+          <input id="duration_hours" type="number" min="0" max="23" placeholder="hh">&nbsp;hrs&nbsp;&nbsp;<input id="duration_minutes" type="number" min="0" max="59" placeholder="mm">&nbsp;min&nbsp;&nbsp;<!--:<input id="duration_seconds" type="number" min="0" max="59" placeholder="ss">&nbsp;sec-->
+        </div>
         <div><label for="stop">Stop: </label><input id="stop" type="datetime-local"></div>
       </details>
+      <div><input id="test" type="button" value="Use Test Config"></div>
     </fieldset>
     <div class="connected">
-      <div><input class="button" type="submit" value="Configure"></div>
+      <div class="main_button"><input class="button" type="submit" value="Configure"></div>
     </div>
     <div class="disconnected">
-      <div><input class="button" id="add_device" type="button" value="Connect to device..."></div>
+      <div class="main_button"><input class="button" id="add_device" type="button" value="Connect to device..."></div>
     </div>
   </form>
   <form class="connected">

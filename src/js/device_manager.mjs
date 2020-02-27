@@ -4,17 +4,21 @@ export default class DeviceManager {
 
     constructor() {
         this.devices = {};
+        this.warnings = [];
+        if (!navigator.usb) {
+            this.warnings.push('ERROR: WebUSB is not supported in this browser.');
+        }
         if (navigator.appVersion.indexOf('(Windows') >= 0) {
-            console.log('WARNING: On Windows, CDC devices are likely to be claimed by the driver.');
+            this.warnings.push('WARNING: Will not work on Windows (CDC devices claimed by the driver).');
         }
         if (location.protocol === 'file:') {
-            console.log('WARNING: WebUSB may not work over the file: protocol -- try via a web server.');
+            this.warnings.push('WARNING: WebUSB may not work over the file: protocol (try via a web server).');
         }
         if (location.protocol !== 'https:') {
-            console.log('WARNING: WebUSB may require secure HTTPS.');
+            this.warnings.push('WARNING: WebUSB may require secure HTTPS.');
         }
-        if (!navigator.usb) {
-            console.log('ERROR: WebUSB not supported in this browser.');
+        for (let warning of this.warnings) {
+            console.log(warning);
         }
     }
 

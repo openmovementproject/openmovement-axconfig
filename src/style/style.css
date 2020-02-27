@@ -18,6 +18,10 @@ body {
 	margin: 0.5em;
 }
 
+.main_button {
+	text-align: center;
+}
+
 #output::-webkit-scrollbar {
 	width: 0.5em;
 }
@@ -130,3 +134,6 @@ fieldset output {
 .device-connected .disconnected { display: none; }
 .device-connected .connected { display: block; }
 
+#duration_days, #duration_hours, #duration_minutes, #duration_seconds {
+	text-align: right;
+}
