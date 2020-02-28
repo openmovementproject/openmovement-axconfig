@@ -2,6 +2,23 @@ import { sleep } from './util.mjs';
 const encoder = new TextEncoder('windows-1252');
 const decoder = new TextDecoder('windows-1252');
 
+/*
+{
+    '_c':   'StudyCentre',
+    '_s':   'StudyCode',
+    '_i':   'StudyInvestigator', 
+    '_x':   'StudyExerciseType',
+    '_so':  'StudyOperator',
+    '_n':   'StudyNotes',
+    '_p':   'SubjectSite', // - / left wrist / right wrist / waist / left ankle / right ankle / left thigh / right thigh / left hip / right hip / left upper-arm / right upper-arm / chest / sacrum / neck / head
+    '_sc':  'SubjectCode',
+    '_se':  'SubjectSex',  // - / male / female
+    '_h':   'SubjectHeight',
+    '_w':   'SubjectWeight',
+    '_ha':  'SubjectHandedness', // - / left / right
+    '_sn':  'SubjectNotes',
+};
+*/
 
 function getSerialNumber(serial) {
     if (serial === undefined || serial === null) return null;

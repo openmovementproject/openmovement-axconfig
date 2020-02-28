@@ -34,6 +34,7 @@ Add the user to the `plugdev` group: `sudo adduser pi plugdev`
 import { redirectConsole, watchParameters, localTimeString, localTimeValue } from './util.mjs';
 import KeyInput from './key_input.mjs';
 import DeviceManager from './device_manager.mjs';
+import Barcode from './barcode.mjs';
 
 window.addEventListener("error", function (e) {
     document.getElementById('warnings').appendChild(document.createTextNode('⚠️ Unhandled error.'));
@@ -130,7 +131,19 @@ window.addEventListener('DOMContentLoaded', async (event) => {
         document.querySelector('#rate').value = config.rate;
         document.querySelector('#range').value = config.range;
         document.querySelector('#start').value = config.start ? localTimeString(config.start).slice(0, -7) : null;
-        document.querySelector('#stop').value = config.stop ? localTimeString(config.stop).slice(0, -7) : null;
+        if (!config.stop && !config.duration && config.duration !== 0) {
+            document.querySelector('#duration_days').value = 0;
+            document.querySelector('#duration_hours').value = 0;
+            document.querySelector('#duration_minutes').value = 0;
+            if (document.querySelector('#duration_seconds')) document.querySelector('#duration_seconds').value = 0;    
+            durationChanged(0);
+        } else if (config.stop) {
+            document.querySelector('#stop').value = config.stop ? localTimeString(config.stop).slice(0, -7) : null;
+            stopChanged();
+        } else {
+            durationChanged(config.duration);
+        }
+
         document.querySelector('#metadata').value = config.metadata;
         updateEnabled();
     }
@@ -158,12 +171,26 @@ window.addEventListener('DOMContentLoaded', async (event) => {
         if (document.querySelector('#duration_seconds')) document.querySelector('#duration_seconds').value = duration_seconds;
     }
 
-    const durationChanged = () => {
+    const durationChanged = (duration) => {
+        if (Number(duration) === duration) {
+            const duration_days = Math.floor(duration / 1000 / 60 / 60 / 24);
+            const duration_hours = Math.floor((duration / 1000 - (24 * 60 * 60 * duration_days)) / 60 / 60);
+            const duration_minutes = Math.floor((duration / 1000 - (24 * 60 * 60 * duration_days + 60 * 60 * duration_hours)) / 60);
+            const duration_seconds = duration / 1000 - (24 * 60 * 60 * duration_days + 60 * 60 * duration_hours + 60 * duration_minutes);
+            document.querySelector('#duration_days').value = duration_days;
+            document.querySelector('#duration_hours').value = duration_hours;
+            document.querySelector('#duration_minutes').value = duration_minutes;
+            if (document.querySelector('#duration_seconds')) document.querySelector('#duration_seconds').value = duration_seconds; 
+        }
         // Recalculate stop
         const start = localTimeValue(document.querySelector('#start').value);
-        const duration = getDuration();
-        const stop = new Date(start.getTime() + duration);
-        document.querySelector('#stop').value = localTimeString(stop).slice(0, -7);
+        const durationValue = getDuration();
+        if (start) {
+            const stop = new Date(start.getTime() + durationValue);
+            document.querySelector('#stop').value = localTimeString(stop).slice(0, -7);    
+        } else {
+            document.querySelector('#stop').value = document.querySelector('#start').value;
+        }
     }
 
     const configFromForm = () => {
@@ -256,13 +283,17 @@ window.addEventListener('DOMContentLoaded', async (event) => {
             metadata: 'Hello_world!',
         };
         updateForm(config);
-        stopChanged();
     });
 
     watchParameters((params) => {
         console.log('PARAMS: ' + JSON.stringify(params));
 
-        document.querySelector('body').classList.toggle('console', typeof params.noconsole === 'undefined');
+        let showDebug = true; // default
+        if (typeof params.nodebug !== 'undefined') showDebug = false;
+        if (typeof params.debug !== 'undefined') showDebug = true;
+
+        document.querySelector('body').classList.toggle('console', showDebug);
+
         if (params.config) {
             keyInput.setValue(params.config);
         }
@@ -287,14 +318,14 @@ window.addEventListener('DOMContentLoaded', async (event) => {
         }
         elem.addEventListener('change', durationChanged);
         elem.addEventListener('input', durationChanged);
-        //elem.addEventListener('propertychange', updateEnabled);
+        //elem.addEventListener('propertychange', durationChanged);
     }
 
     for (let input of ['#stop']) {
         const elem = document.querySelector(input);
         elem.addEventListener('change', stopChanged);
         elem.addEventListener('input', stopChanged);
-        //elem.addEventListener('propertychange', updateEnabled);
+        //elem.addEventListener('propertychange', stopChanged);
     }
 
     clearConfig();

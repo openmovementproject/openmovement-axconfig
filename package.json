@@ -9,7 +9,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "parcel src/index.html",
-    "build": "parcel build src/index.html --public-url ./ --out-dir docs && del-cli docs/*.map docs/*.js docs/*.css"
+    "build": "parcel build src/index.html --public-url ./ --out-dir docs && del-cli docs/*.map docs/*.js docs/*.css && cpy src/cache.appcache docs && node -e \"console.log('# ' + (new Date()).toISOString());\" >> docs/cache.appcache"
   },
   "repository": {
     "type": "git",
@@ -29,6 +29,7 @@
     "parcel-plugin-inline-source": "^1.0.0"
   },
   "dependencies": {
+    "cpy-cli": "^3.1.0",
     "test.js": "^1.0.0"
   }
 }

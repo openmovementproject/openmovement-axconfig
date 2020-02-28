@@ -1,6 +1,6 @@
 <!doctype html>
-<html __unused__manifest="cache.appcache">
-<head lang="en">
+<html lang="en" manifest="cache.appcache">
+<head>
 <meta charset="utf-8">
 <!--
 Code
@@ -29,7 +29,6 @@ Device
     <fieldset>
       <legend>Configuration</legend>
       <div><label accesskey="C" for="code">Code: </label><input id="code" type="text" placeholder="..."></div>
-      <div><output id="result" value="-"></output></div>
       <details open>
         <summary>Details</summary>
         <div><label for="session-id">Session ID: </label><input id="session-id" type="number" placeholder="(none)"></div>
@@ -62,6 +61,7 @@ Device
         </div>
         <div><label for="stop">Stop: </label><input id="stop" type="datetime-local"></div>
       </details>
+      <div><output id="result" value="-"></output></div>
       <div><input id="test" type="button" value="Use Test Config"></div>
     </fieldset>
     <div class="connected">
