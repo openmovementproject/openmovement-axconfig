@@ -9,7 +9,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "parcel src/index.html",
-    "build": "parcel build src/index.html --public-url ./ --out-dir docs && del-cli docs/*.map docs/*.js docs/*.css && cpy src/cache.appcache docs && node -e \"console.log('# ' + (new Date()).toISOString());\" >> docs/cache.appcache"
+    "build": "parcel build src/index.html --public-url ./ --out-dir docs && del-cli docs/*.map docs/*.js docs/*.css docs/icon*.*.png docs/manifest.webmanifest && cpy src/cache.appcache src/manifest.webmanifest icon*.png docs && node -e \"console.log('# version ' + (new Date()).toISOString());\" >> docs/cache.appcache"
   },
   "repository": {
     "type": "git",
@@ -26,10 +26,15 @@
   "devDependencies": {
     "del-cli": "^3.0.0",
     "parcel-bundler": "^1.12.4",
+    "parcel-plugin-html-externals": "^0.1.2",
     "parcel-plugin-inline-source": "^1.0.0"
   },
   "dependencies": {
     "cpy-cli": "^3.1.0",
     "test.js": "^1.0.0"
+  },
+  "externals": {
+    "manifest.webmanifest": false,
+    "icon*.png": false
   }
 }

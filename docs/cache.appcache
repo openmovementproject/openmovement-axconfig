@@ -2,8 +2,16 @@ CACHE MANIFEST
 
 # Cache (entries were prefixed with '/')
 CACHE:
-/
-#index.html
+/manifest.webmanifest
+/icon64.png
+/icon96.png
+/icon48.png
+/icon100.png
+/icon128.png
+#/icon.ico
+# Referencing page is implicitly cached
+#/
+#/index.html
 
 # Access everything else from network if available
 NETWORK:
@@ -11,8 +19,11 @@ NETWORK:
 
 # Fallback content
 FALLBACK:
-# / fallback.html
+#/ fallback.html
 
+# prefer-online fast
+SETTINGS:
+prefer-online
 
 # Timestamp inserted below to ensure manifest changes when distribution changes:
-# 2020-02-28T18:19:01.591Z
+# version 2020-02-28T23:08:00.804Z

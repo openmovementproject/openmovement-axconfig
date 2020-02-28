@@ -411,5 +411,13 @@ window.addEventListener('DOMContentLoaded', async (event) => {
             keyInput.setValue(params.config);
         }
     });
+    
+    if (window.applicationCache) {
+        applicationCache.addEventListener('updateready', function() {
+            if (confirm('Update available -- reload now?')) {
+                window.location.reload();
+            }
+        });
+    }
 
 });
