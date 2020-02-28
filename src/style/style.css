@@ -108,11 +108,12 @@ fieldset div {
 
 fieldset label {
 	margin-left: 0.5em;
-	width: 5.5em;
+	width: 6em;
 }
 
 fieldset input[type=text], fieldset input[type=number], fieldset input[type=datetime-local], fieldset output, fieldset meter , fieldset select {
-	flex-grow: 4;
+	width: 6.6em;
+	flex-grow: 1;
 }
 
 #code {
@@ -125,7 +126,7 @@ fieldset #battery {
 }
 
 fieldset output {
-	flex-grow: 4;
+	flex-grow: 1;
 }
 
 /* .device-connected */

@@ -1,12 +1,15 @@
-// Device object (obtained from user) with interfaces -- disconnect?
-// - Line writes
-// - Line reads with timeout
-// - Set of awaitable commands
-// Save config to localstorage
 // Form for input details
+// Save config to localstorage?
 // Check battery and configuration status?
-// Barcode/QR-code read
-// Save log to localstorage (and sync)
+// Barcode/QR-code read?
+// Save log to localstorage (and sync)?
+
+// Extract last 9 digits:
+//   parseInt('0' + id.replace(/[^0-9]/g, '').slice(-9))
+//
+// Extract last 9 alphanumeric characters convert non-numeric to '0':
+//   parseInt('0' + id.replace(/[^A-Za-z0-9]/g, '').replace(/[^0-9]/g, '0').slice(-9))
+
 /*
 Linux: USB devices typically read-only for non-root users.
 
@@ -34,7 +37,7 @@ Add the user to the `plugdev` group: `sudo adduser pi plugdev`
 import { redirectConsole, watchParameters, localTimeString, localTimeValue } from './util.mjs';
 import KeyInput from './key_input.mjs';
 import DeviceManager from './device_manager.mjs';
-import Barcode from './barcode.mjs';
+//import Barcode from './barcode.mjs';
 
 window.addEventListener("error", function (e) {
     document.getElementById('warnings').appendChild(document.createTextNode('⚠️ Unhandled error.'));
@@ -54,6 +57,10 @@ window.addEventListener("unhandledrejection", function (e) {
 redirectConsole('#output');
 
 let currentDevice = null;
+let startRelative = null;
+let lastConfig = {};
+
+const RELATIVE_CUTOFF = 946684800 * 1000;   // 2000-01-01 (treat as relative time if smaller than this)
 
 window.addEventListener('DOMContentLoaded', async (event) => {
     const deviceManager = new DeviceManager();
@@ -124,70 +131,86 @@ window.addEventListener('DOMContentLoaded', async (event) => {
             console.log('STATUS: ' + JSON.stringify(currentDevice.status));
             //updateStatus();
         }
-    };
+    }
+
+    const parseDate = (time) => {
+        if (!time && time !== 0) return null;
+        if (time && Object.prototype.toString.call(time) === "[object Date]" && !isNaN(time)) {
+            return time;
+        }
+        if (/\d\d\d\d-\d\d-\d\d[T ]\d\d:\d\d:\d\d(?:\.\d\d\d)?Z?/.test(time)) {
+            try {
+                return new Date(time);
+            } catch (e) {
+                console.error('ERROR: Problem parsing date: ' + time);
+            }
+        }
+        return null;
+    }
+
+    const relativeTime = (time, relativeTo, unitScale = 60 * 60 * 1000) => {
+        if (!time && time !== 0) return null;
+        const date = parseDate(time);
+        if (date) {
+            return date;
+        }
+        relativeTo = (!relativeTo && relativeTo !== 0) ? (new Date()) : relativeTo;
+        return new Date(relativeTo.getTime() + parseFloat(time) * unitScale);
+    }
 
     const updateForm = (config) => {
-        document.querySelector('#session-id').value = config.sessionId;
-        document.querySelector('#rate').value = config.rate;
-        document.querySelector('#range').value = config.range;
-        document.querySelector('#start').value = config.start ? localTimeString(config.start).slice(0, -7) : null;
-        if (!config.stop && !config.duration && config.duration !== 0) {
-            document.querySelector('#duration_days').value = 0;
-            document.querySelector('#duration_hours').value = 0;
-            document.querySelector('#duration_minutes').value = 0;
-            if (document.querySelector('#duration_seconds')) document.querySelector('#duration_seconds').value = 0;    
-            durationChanged(0);
-        } else if (config.stop) {
-            document.querySelector('#stop').value = config.stop ? localTimeString(config.stop).slice(0, -7) : null;
-            stopChanged();
-        } else {
-            durationChanged(config.duration);
-        }
+        document.querySelector('#session').value = typeof config.session !== 'undefined' ? config.session : '';
+        document.querySelector('#rate').value = typeof config.rate !== 'undefined' ? config.rate : '';
+        document.querySelector('#range').value = typeof config.range !== 'undefined' ? config.range : '';
 
-        document.querySelector('#metadata').value = config.metadata;
+        let now = new Date();
+        let start = relativeTime(config.start, now);
+        if (start === null) {
+            start = now;
+        }
+        document.querySelector('#start').value = localTimeString(start, true) || '';
+        let stop = relativeTime(config.stop, start);
+        if (stop === null) {
+            stop = now;
+        }
+        document.querySelector('#stop').value = localTimeString(stop, true) || '';
+        stopChanged();
+        //durationChanged(0);
+
+        document.querySelector('#metadata').value = typeof config.metadata !== 'undefined' ? config.metadata : '';
         updateEnabled();
     }
 
     const getDuration = () => {
-        const days = parseFloat(document.querySelector('#duration_days').value);
-        const hours = parseFloat(document.querySelector('#duration_hours').value);
-        const minutes = parseFloat(document.querySelector('#duration_minutes').value);
-        const seconds = parseFloat(document.querySelector('#duration_seconds') ? document.querySelector('#duration_seconds').value : '0');
-        return (((days * 24 + hours) * 60 + minutes) * 60 + seconds) * 1000;
+        if (document.querySelector('#duration').value === '') return null;
+        const hours = parseFloat(document.querySelector('#duration').value);
+        return hours * 60 * 60 * 1000;
     }
 
     const stopChanged = () => {
         // Recalculate duration
         const start = localTimeValue(document.querySelector('#start').value);
         const stop = localTimeValue(document.querySelector('#stop').value);
+        if (stop === null || start === null) {
+            document.querySelector('#duration').value = '';
+            return;
+        }
         const duration = stop.getTime() - start.getTime();
-        const duration_days = Math.floor(duration / 1000 / 60 / 60 / 24);
-        const duration_hours = Math.floor((duration / 1000 - (24 * 60 * 60 * duration_days)) / 60 / 60);
-        const duration_minutes = Math.floor((duration / 1000 - (24 * 60 * 60 * duration_days + 60 * 60 * duration_hours)) / 60);
-        const duration_seconds = duration / 1000 - (24 * 60 * 60 * duration_days + 60 * 60 * duration_hours + 60 * duration_minutes);
-        document.querySelector('#duration_days').value = duration_days;
-        document.querySelector('#duration_hours').value = duration_hours;
-        document.querySelector('#duration_minutes').value = duration_minutes;
-        if (document.querySelector('#duration_seconds')) document.querySelector('#duration_seconds').value = duration_seconds;
+        const hours = duration / 1000 / 60 / 60;
+        document.querySelector('#duration').value = hours;
     }
 
     const durationChanged = (duration) => {
         if (Number(duration) === duration) {
-            const duration_days = Math.floor(duration / 1000 / 60 / 60 / 24);
-            const duration_hours = Math.floor((duration / 1000 - (24 * 60 * 60 * duration_days)) / 60 / 60);
-            const duration_minutes = Math.floor((duration / 1000 - (24 * 60 * 60 * duration_days + 60 * 60 * duration_hours)) / 60);
-            const duration_seconds = duration / 1000 - (24 * 60 * 60 * duration_days + 60 * 60 * duration_hours + 60 * duration_minutes);
-            document.querySelector('#duration_days').value = duration_days;
-            document.querySelector('#duration_hours').value = duration_hours;
-            document.querySelector('#duration_minutes').value = duration_minutes;
-            if (document.querySelector('#duration_seconds')) document.querySelector('#duration_seconds').value = duration_seconds; 
+            const hours = duration / 1000 / 60 / 60;
+            document.querySelector('#duration').value = hours;
         }
         // Recalculate stop
         const start = localTimeValue(document.querySelector('#start').value);
-        const durationValue = getDuration();
         if (start) {
+            const durationValue = getDuration();
             const stop = new Date(start.getTime() + durationValue);
-            document.querySelector('#stop').value = localTimeString(stop).slice(0, -7);    
+            document.querySelector('#stop').value = localTimeString(stop, true);
         } else {
             document.querySelector('#stop').value = document.querySelector('#start').value;
         }
@@ -195,7 +218,7 @@ window.addEventListener('DOMContentLoaded', async (event) => {
 
     const configFromForm = () => {
         const config = {
-            sessionId: parseInt(document.querySelector('#session-id').value),
+            session: document.querySelector('#session').value == '' ? null : parseInt(document.querySelector('#session').value),
             rate: parseFloat(document.querySelector('#rate').value),
             range: parseInt(document.querySelector('#range').value),
             start: localTimeValue(document.querySelector('#start').value),
@@ -203,19 +226,48 @@ window.addEventListener('DOMContentLoaded', async (event) => {
             metadata: document.querySelector('#metadata').value,
         };
         const notSpecified = [];
-        if (typeof config.sessionId !== 'number' || isNaN(config.sessionId)) notSpecified.push('session ID');
-        if (typeof config.start !== 'object' || !config.start) notSpecified.push('start time');
-        if (typeof config.stop !== 'object' || !config.stop) notSpecified.push('stop time');
+        if (typeof config.session !== 'number' || isNaN(config.session)) notSpecified.push('no session ID');
+        if (typeof config.start !== 'object' || !config.start) notSpecified.push('no start time');
+        if (typeof config.stop !== 'object' || !config.stop) notSpecified.push('no stop time');
+        if (getDuration() <= 0) { notSpecified.push('no valid interval'); }
         if (notSpecified.length > 0) {
-            throw "Not specified: " + notSpecified.join(', ') + '.';
+            throw "Error: " + notSpecified.join(', ') + '.';
         }
         return config;
     }
 
+    const upsertMetadata = (metadata, id, newValue) => {
+        if (metadata.length > 0 && metadata[0] == '?') { metadata = metadata.slice(1); }
+        const parts = metadata.split('&');
+        const components = [];
+        let updated = false;
+        for (let part of parts) {
+            const equals = part.indexOf('=');
+            const key = decodeURIComponent((equals >= 0) ? part.slice(0, equals) : part).replace(/\+/g, ' ');
+            if (key.length <= 0) continue;
+            //const value = decodeURIComponent((equals >= 0) ? part.slice(equals + 1) : '').replace(/\+/g, ' ');
+            if (key == id) {
+                if (!updated) {
+                    updated = true;
+                    if (newValue !== null) {
+                        components.push(encodeURIComponent(key) + '=' + encodeURIComponent(newValue));
+                    }
+                }
+                // else ignore repeated value
+            } else {
+                components.push(part);
+            }
+        }
+        if (!updated) {
+            components.push(encodeURIComponent(id) + '=' + encodeURIComponent(newValue));
+        }
+        return components.join('&');
+    }
+
     const clearConfig = () => {
-        console.log('Clearing config...');
+        //console.log('Clearing config...');
         const config = {
-            sessionId: null,
+            session: null,
             rate: 100,
             range: 8,
             start: null,
@@ -238,6 +290,15 @@ window.addEventListener('DOMContentLoaded', async (event) => {
     const codeChanged = (code) => {
         console.log('CODE: ' + code);
 
+        // Extract last 9 digits:
+        const sessionId = code.trim().length > 0 ? parseInt('0' + code.replace(/[^0-9]/g, '').slice(-9)) : '';
+        //
+        // Extract last 9 alphanumeric characters convert non-numeric to '0':
+        //const sessionId = parseInt('0' + code.replace(/[^A-Za-z0-9]/g, '').replace(/[^0-9]/g, '0').slice(-9))
+        document.querySelector('#session').value = sessionId;
+
+        document.querySelector('#metadata').value = upsertMetadata(document.querySelector('#metadata').value, '_sc', code);
+        
         updateEnabled();
     };
     const submit = async () => {
@@ -252,7 +313,7 @@ window.addEventListener('DOMContentLoaded', async (event) => {
             try {
                 const status = await currentDevice.configure(config);
                 console.log('CONFIG-STATUS: ' + JSON.stringify(status));
-                setResult('Configured', false);
+                setResult('ℹ️ Configured', false);
             } catch (e) {
                 console.log('CONFIG-ERROR: ' + JSON.stringify(e));
                 setResult(e, true);
@@ -272,50 +333,15 @@ window.addEventListener('DOMContentLoaded', async (event) => {
         await deviceManager.userAddDevice();
     });
 
-    document.querySelector('#test').addEventListener('click', () => {
-        const now = new Date();
-        const config = {
-            sessionId: 123456789,
-            rate: 100,
-            range: 8,
-            start: new Date(now.getTime() + 1*60*1000),
-            stop: new Date(now.getTime() + 2*60*1000),
-            metadata: 'Hello_world!',
-        };
-        updateForm(config);
-    });
-
-    watchParameters((params) => {
-        console.log('PARAMS: ' + JSON.stringify(params));
-
-        let showDebug = true; // default
-        if (typeof params.nodebug !== 'undefined') showDebug = false;
-        if (typeof params.debug !== 'undefined') showDebug = true;
-
-        document.querySelector('body').classList.toggle('console', showDebug);
-
-        if (params.config) {
-            keyInput.setValue(params.config);
-        }
-    });
-
-    for (let input of ['#session-id', '#rate', '#range', '#start', '#duration_days', '#duration_hours', '#duration_minutes', '#duration_seconds', '#stop', '#metadata']) {
+    for (let input of ['#session', '#rate', '#range', '#start', '#duration', '#stop', '#metadata']) {
         const elem = document.querySelector(input);
-        if (!elem) {
-            if (input === '#duration_seconds') continue;
-            throw 'Element not found: ' + input;
-        }
         elem.addEventListener('change', updateEnabled);
         elem.addEventListener('input', updateEnabled);
         elem.addEventListener('propertychange', updateEnabled);
     }
 
-    for (let input of ['#duration_days', '#duration_hours', '#duration_minutes', '#duration_seconds']) {
+    for (let input of ['#duration']) {
         const elem = document.querySelector(input);
-        if (!elem) {
-            if (input === '#duration_seconds') continue;
-            throw 'Element not found: ' + input;
-        }
         elem.addEventListener('change', durationChanged);
         elem.addEventListener('input', durationChanged);
         //elem.addEventListener('propertychange', durationChanged);
@@ -329,5 +355,61 @@ window.addEventListener('DOMContentLoaded', async (event) => {
     }
 
     clearConfig();
-   
+
+    watchParameters((params) => {
+        console.log('PARAMS: ' + JSON.stringify(params));
+
+        let showDebug = false; // default
+        if (typeof params.nodebug !== 'undefined') showDebug = false;
+        if (typeof params.debug !== 'undefined') showDebug = true;
+        document.querySelector('body').classList.toggle('console', showDebug);
+
+        let readonly = false; // default
+        if (typeof params.editable !== 'undefined') readonly = false;
+        if (typeof params.readonly !== 'undefined') readonly = true;
+        for (let input of ['#session', '#rate', '#range', '#start', '#duration', '#stop', '#metadata']) {
+            const elem = document.querySelector(input);
+            if (readonly) {
+                elem.setAttribute('disabled', 'true');
+            } else {
+                elem.removeAttribute('disabled');
+            }
+        }
+
+        let details = false; // default
+        if (typeof params.details !== 'undefined') details = true;
+        if (typeof params.nodetails !== 'undefined') details = false;
+        if (details) {
+            document.querySelector('#details').setAttribute('open', 'true');
+        } else {
+            document.querySelector('#details').removeAttribute('open');
+        }
+    
+        const newConfig = {
+            session: null,
+            rate: 100,
+            range: 8,
+            start: null,
+            stop: 168,
+            metadata: '',
+        };
+        let changedConfig = false;
+        for (let part of ['session', 'rate', 'range', 'start', 'stop', 'metadata']) {
+            if (typeof params[part] !== 'undefined') { newConfig[part] = params[part]; }
+            changedConfig |= (typeof newConfig[part] !== typeof lastConfig[part] || newConfig[part] == lastConfig[part]);
+        }
+
+        if (changedConfig) {
+            lastConfig = newConfig;
+            console.log('PARAMS: Config changed: ' + JSON.stringify(newConfig));
+            updateForm(newConfig);
+        } else {
+            console.log('PARAMS: Config not changed: ' + JSON.stringify(newConfig));
+        }
+
+        if (params.config) {
+            keyInput.setValue(params.config);
+        }
+    });
+
 });

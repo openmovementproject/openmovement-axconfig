@@ -3,10 +3,11 @@ export async function sleep(msec) {
     return new Promise(resolve => setTimeout(resolve, msec));
 }
 
-export function localTimeString(date) {
+export function localTimeString(date, minutes) {
     if (typeof date !== 'object') return null;
     const tzOffset = (new Date()).getTimezoneOffset() * 60 * 1000;
     const local = (new Date(date.getTime() - tzOffset)).toISOString().slice(0, -1);
+    if (minutes) return local.slice(0, -7);
     return local;
 }
 

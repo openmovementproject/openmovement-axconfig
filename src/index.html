@@ -29,9 +29,9 @@ Device
     <fieldset>
       <legend>Configuration</legend>
       <div><label accesskey="C" for="code">Code: </label><input id="code" type="text" placeholder="..."></div>
-      <details open>
+      <details id="details" open>
         <summary>Details</summary>
-        <div><label for="session-id">Session ID: </label><input id="session-id" type="number" placeholder="(none)"></div>
+        <div><label for="session">Session ID: </label><input id="session" type="number" placeholder="(none)"></div>
         <div><label for="rate">Rate: </label>
           <select id="rate" placeholder="">
             <option value="3200">3200 Hz</option>
@@ -55,14 +55,10 @@ Device
         </div>
         <div><label for="metadata">Metadata: </label><input id="metadata" type="text" placeholder="(none)"></div>
         <div><label for="start">Start: </label><input id="start" type="datetime-local"></div>
-        <div><label for="duration_days">Duration: </label>
-          <input id="duration_days" type="number" min="0" placeholder="days">&nbsp;day(s)&nbsp;&nbsp;
-          <input id="duration_hours" type="number" min="0" max="23" placeholder="hh">&nbsp;hrs&nbsp;&nbsp;<input id="duration_minutes" type="number" min="0" max="59" placeholder="mm">&nbsp;min&nbsp;&nbsp;<!--:<input id="duration_seconds" type="number" min="0" max="59" placeholder="ss">&nbsp;sec-->
-        </div>
+        <div><label for="duration">Duration (h): </label><input id="duration" type="number" min="0" placeholder="(hours)" step="any"></div>
         <div><label for="stop">Stop: </label><input id="stop" type="datetime-local"></div>
       </details>
       <div><output id="result" value="-"></output></div>
-      <div><input id="test" type="button" value="Use Test Config"></div>
     </fieldset>
     <div class="connected">
       <div class="main_button"><input class="button" type="submit" value="Configure"></div>
