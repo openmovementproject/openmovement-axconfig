@@ -41,15 +41,15 @@ import DeviceManager from './device_manager.mjs';
 
 window.addEventListener("error", function (e) {
     document.getElementById('warnings').appendChild(document.createTextNode('⚠️ Unhandled error.'));
-    console.error("ERROR: Unhandled error: " + (e.error && e.error.message ? e.error.message : e.error));
-    console.error(JSON.stringify(e));
+    console.log("ERROR: Unhandled error: " + (e.error && e.error.message ? e.error.message : e.error));
+    console.log(JSON.stringify(e));
     return false;
 });
 
 window.addEventListener("unhandledrejection", function (e) {
     document.getElementById('warnings').appendChild(document.createTextNode('⚠️ Unhandled promise rejection.'));
-    console.error("ERROR: Unhandled rejection: " + (e.error && e.error.message ? e.error.message : e.error));
-    console.error(JSON.stringify(e));
+    console.log("ERROR: Unhandled rejection: " + (e.error && e.error.message ? e.error.message : e.error));
+    console.log(JSON.stringify(e));
     return false;
 });
 
@@ -59,6 +59,7 @@ redirectConsole('#output');
 let currentDevice = null;
 let startRelative = null;
 let lastConfig = {};
+let afterClearCode = false;
 
 const RELATIVE_CUTOFF = 946684800 * 1000;   // 2000-01-01 (treat as relative time if smaller than this)
 
@@ -73,15 +74,19 @@ window.addEventListener('DOMContentLoaded', async (event) => {
 
     const updateEnabled = () => {
         //const code = document.querySelector(codeInput).value;
-
+        
         let config = null;
         try {
             config = configFromForm();
             //console.log(JSON.stringify(config, null, 4));
             setResult('', false);
+            console.log('CONFIG-VALID: true');
+            document.querySelector('body').classList.add('config-valid');
         } catch (e) {
             //console.log('CONFIGURATION: ' + e);
             setResult(e, true);
+            console.log('CONFIG-VALID: false');
+            document.querySelector('body').classList.remove('config-valid');
         }
 
         const enabled = config && !!currentDevice; // && code.length > 0
@@ -142,7 +147,7 @@ window.addEventListener('DOMContentLoaded', async (event) => {
             try {
                 return new Date(time);
             } catch (e) {
-                console.error('ERROR: Problem parsing date: ' + time);
+                console.log('ERROR: Problem parsing date: ' + time);
             }
         }
         return null;
@@ -163,17 +168,21 @@ window.addEventListener('DOMContentLoaded', async (event) => {
         document.querySelector('#rate').value = typeof config.rate !== 'undefined' ? config.rate : '';
         document.querySelector('#range').value = typeof config.range !== 'undefined' ? config.range : '';
 
-        let now = new Date();
-        let start = relativeTime(config.start, now);
-        if (start === null) {
-            start = now;
+        let start = parseDate(config.start);
+        if (!start) {
+            document.querySelector('#delay').value = (!config.start && config.start !== 0) ? '' : parseFloat(config.start);
+            delayChanged();
+        } else {
+            document.querySelector('#start').value = localTimeString(start, true) || '';
+            startChanged();
         }
-        document.querySelector('#start').value = localTimeString(start, true) || '';
+
         let stop = relativeTime(config.stop, start);
         if (stop === null) {
-            stop = now;
+            document.querySelector('#stop').value = document.querySelector('#start').value;
+        } else {
+            document.querySelector('#stop').value = localTimeString(stop, true) || '';
         }
-        document.querySelector('#stop').value = localTimeString(stop, true) || '';
         stopChanged();
         //durationChanged(0);
 
@@ -185,6 +194,33 @@ window.addEventListener('DOMContentLoaded', async (event) => {
         if (document.querySelector('#duration').value === '') return null;
         const hours = parseFloat(document.querySelector('#duration').value);
         return hours * 60 * 60 * 1000;
+    }
+
+    const startChanged = () => {
+        // Stop using delay
+        const start = localTimeValue(document.querySelector('#start').value);
+        document.querySelector('#delay').value = '';
+        durationChanged();
+    }
+
+    const delayChanged = (delayValue = null) => {
+        // Update start
+        if (Number(delayValue) === delayValue) {
+            document.querySelector('#delay').value = delayValue;
+        }
+        const delay = document.querySelector('#delay').value;
+        if (delay.trim() !== '') {
+            const now = new Date();
+            const start = new Date(now.getTime() + parseFloat(delay) * 60 * 60 * 1000);
+            const elem = document.querySelector('#start');
+            const newValue = localTimeString(start, true);
+//console.log("DELAY CHANGED?: " + parseFloat(delay) + " -> " + newValue);
+            if (elem.value != newValue) {
+                console.log("UPDATE: Start updated to current time (delay " + parseFloat(delay) + " hrs): " + newValue)
+                elem.value = newValue;
+                durationChanged();
+            }
+        }
     }
 
     const stopChanged = () => {
@@ -270,7 +306,7 @@ window.addEventListener('DOMContentLoaded', async (event) => {
             session: null,
             rate: 100,
             range: 8,
-            start: null,
+            start: 0,
             stop: null,
             metadata: '',
         }
@@ -314,6 +350,16 @@ window.addEventListener('DOMContentLoaded', async (event) => {
                 const status = await currentDevice.configure(config);
                 console.log('CONFIG-STATUS: ' + JSON.stringify(status));
                 setResult('ℹ️ Configured', false);
+
+                document.querySelector('body').classList.add('completed');
+
+                // Post-config behaviour
+                if (afterClearCode) {
+                    keyInput.setValue('');
+                    document.querySelector('#code').value = '';
+                    document.querySelector('#code').select();
+                    document.querySelector('#code').focus();
+                }
             } catch (e) {
                 console.log('CONFIG-ERROR: ' + JSON.stringify(e));
                 setResult(e, true);
@@ -329,15 +375,26 @@ window.addEventListener('DOMContentLoaded', async (event) => {
 
     deviceManager.startup(deviceChanged);
 
+    document.querySelector('#reconfigure').addEventListener('click', async () => {
+        document.querySelector('body').classList.remove('completed');
+    });
+
     document.querySelector('#add_device').addEventListener('click', async () => {
         await deviceManager.userAddDevice();
     });
 
-    for (let input of ['#session', '#rate', '#range', '#start', '#duration', '#stop', '#metadata']) {
+    for (let input of ['#delay']) {
         const elem = document.querySelector(input);
-        elem.addEventListener('change', updateEnabled);
-        elem.addEventListener('input', updateEnabled);
-        elem.addEventListener('propertychange', updateEnabled);
+        elem.addEventListener('change', delayChanged);
+        elem.addEventListener('input', delayChanged);
+        //elem.addEventListener('propertychange', delayChanged);
+    }
+
+    for (let input of ['#start']) {
+        const elem = document.querySelector(input);
+        elem.addEventListener('change', startChanged);
+        elem.addEventListener('input', startChanged);
+        //elem.addEventListener('propertychange', startChanged);
     }
 
     for (let input of ['#duration']) {
@@ -354,6 +411,13 @@ window.addEventListener('DOMContentLoaded', async (event) => {
         //elem.addEventListener('propertychange', stopChanged);
     }
 
+    for (let input of ['#session', '#rate', '#range', '#delay', '#start', '#duration', '#stop', '#metadata']) {
+        const elem = document.querySelector(input);
+        elem.addEventListener('change', updateEnabled);
+        elem.addEventListener('input', updateEnabled);
+        elem.addEventListener('propertychange', updateEnabled);
+    }
+
     clearConfig();
 
     watchParameters((params) => {
@@ -367,7 +431,7 @@ window.addEventListener('DOMContentLoaded', async (event) => {
         let readonly = false; // default
         if (typeof params.editable !== 'undefined') readonly = false;
         if (typeof params.readonly !== 'undefined') readonly = true;
-        for (let input of ['#session', '#rate', '#range', '#start', '#duration', '#stop', '#metadata']) {
+        for (let input of ['#session', '#rate', '#range', '#start', '#delay', '#duration', '#stop', '#metadata']) {
             const elem = document.querySelector(input);
             if (readonly) {
                 elem.setAttribute('disabled', 'true');
@@ -376,7 +440,7 @@ window.addEventListener('DOMContentLoaded', async (event) => {
             }
         }
 
-        let details = false; // default
+        let details = true; // default
         if (typeof params.details !== 'undefined') details = true;
         if (typeof params.nodetails !== 'undefined') details = false;
         if (details) {
@@ -389,7 +453,7 @@ window.addEventListener('DOMContentLoaded', async (event) => {
             session: null,
             rate: 100,
             range: 8,
-            start: null,
+            start: 0,
             stop: 168,
             metadata: '',
         };
@@ -410,6 +474,11 @@ window.addEventListener('DOMContentLoaded', async (event) => {
         if (params.config) {
             keyInput.setValue(params.config);
         }
+
+        if (typeof params.focus !== 'undefined') {
+            document.querySelector('#code').select();
+            document.querySelector('#code').focus();
+        }
     });
     
     if (window.applicationCache) {
@@ -419,5 +488,11 @@ window.addEventListener('DOMContentLoaded', async (event) => {
             }
         });
     }
+
+    const timed = () => {
+        delayChanged();
+    };
+
+    setInterval(timed, 15 * 1000);
 
 });

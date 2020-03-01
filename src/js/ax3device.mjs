@@ -1,4 +1,4 @@
-import { sleep } from './util.mjs';
+import { sleep, localTime } from './util.mjs';
 const encoder = new TextEncoder('windows-1252');
 const decoder = new TextDecoder('windows-1252');
 
@@ -752,6 +752,20 @@ export default class Ax3Device {
         }
     }
 
+    async setDebug(debugCode) {
+        let debugValue = (debugCode === true) ? 3 : +debugCode;     // true = debug code 3; false = debug code 0
+        this.updateState('Setting debug status');
+        const command = new Command(`\r\DEBUG ${debugValue}\r\n`, 'DEBUG=', 2000);
+        console.log('>>> ' + command.output);
+        const result = await this.exec(command);
+        const response = result.lastLine();
+        console.log('<<< ' + response);
+        const parts = response.substring(response.indexOf('=') + 1).split(',').map(x => parseInt(x, 10));
+        if (parts[0] != debugValue) {
+            throw `DEBUG value unexpected: was ${parts[0]}, expected ${debugValue}`;
+        }
+    }
+
     async readSector(sectorNumber) {
         const bytesPerLine = 16;
         const sectorSize = 512;
@@ -939,9 +953,6 @@ export default class Ax3Device {
 
             this.recalculateRecordingStatus();
 
-            this.updateState(`Ready`);
-            //this.statusChanged();
-
             return this.status;
         } catch (e) {
             if (e.error) {
@@ -957,11 +968,11 @@ export default class Ax3Device {
         }
     }
 
-    recalculateRecordingStatus() {
+    recalculateRecordingStatus(justConfigured = false) {
         const DATE_MIN = Date.UTC(-271821, 3, 20);
         const DATE_MAX = Date.UTC(275760, 8, 13);
 
-        const now = new Date();
+        const now = localTime(new Date());
 
         let from = this.status.start;
         if (from === -1) from = DATE_MAX;
@@ -972,9 +983,20 @@ export default class Ax3Device {
         if (until === 0) from = DATE_MIN;
         
         this.status.recordingConfigured = from < until;
-        this.status.recordingFinished = now > until;
-        this.status.recordingStarted = now > from;
-        this.status.recordingFuture = this.status.recordingConfigured && !this.status.recordingFinished;
+        this.status.recordingFinished = this.status.recordingConfigured && now >= until;
+        this.status.recordingStarted = this.status.recordingConfigured && now >= from && !this.status.recordingFinished;
+        this.status.recordingIncomplete = this.status.recordingConfigured && !this.status.recordingFinished;
+
+        let state = justConfigured ? 'Configured: ' : '';
+        if (this.status.recordingConfigured) {
+            if (this.status.recordingFinished) state += 'Recording complete';
+            else if (this.status.recordingStarted) state += 'Recording started';
+            else state += 'Configured';
+        } else {
+            state = justConfigured ? 'Settings cleared' : 'Ready';
+        }
+        this.updateState(state);
+        //this.statusChanged();
     }
 
 
@@ -1002,6 +1024,7 @@ export default class Ax3Device {
                 led: Ax3Device.LED_MAGENTA,
                 wipe: true,     // true=wipe first, false=rewrite filesystem, null=commit over
                 noData: false,
+                debug: false,
             }, newConfig);
 
             console.log('ID=' + JSON.stringify(this.status.id));
@@ -1027,9 +1050,11 @@ export default class Ax3Device {
             if (!config.time) {
                 config.time = new Date();
             }
+
             await this.tryAndRetry(() => this.setTime(config.time));
             await this.tryAndRetry(() => this.setSession(config.sessionId));
             await this.tryAndRetry(() => this.setMaxSamples(config.maxSamples));
+            await this.tryAndRetry(() => this.setDebug(config.debug ? 3 : 0));
             await this.tryAndRetry(() => this.setRate(config.accelRate, config.accelRange));
             await this.tryAndRetry(() => this.setHibernate(config.start));
             await this.tryAndRetry(() => this.setStop(config.stop));
@@ -1038,12 +1063,9 @@ export default class Ax3Device {
 
             this.status.start = config.start;
             this.status.stop = config.stop;
-            this.recalculateRecordingStatus();
+            this.recalculateRecordingStatus(true);
 
             await this.tryAndRetry(() => this.setLed(config.led));
-
-            this.updateState('Configured');
-            //this.statusChanged();
 
             // Return configuration report
             return {

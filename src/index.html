@@ -26,7 +26,12 @@ Device
   <div id="warnings"><ul>
     <noscript>⚠️ Scripting not enabled.</noscript>
   </div>
-  <form>
+
+  <div class="complete">
+    <div class="main_button">ℹ️ Configured <input id="reconfigure" class="button" type="button" value="Reconfigure..."></div>
+  </div>
+
+  <form class="incomplete">
     <fieldset>
       <legend>Configuration</legend>
       <div><label accesskey="C" for="code">Code: </label><input id="code" type="text" placeholder="..."></div>
@@ -55,19 +60,21 @@ Device
           </select>
         </div>
         <div><label for="metadata">Metadata: </label><input id="metadata" type="text" placeholder="(none)"></div>
+        <div><label for="delay">Delay (h): </label><input id="delay" type="number" min="0" placeholder="(hours)" step="any"></div>
         <div><label for="start">Start: </label><input id="start" type="datetime-local"></div>
         <div><label for="duration">Duration (h): </label><input id="duration" type="number" min="0" placeholder="(hours)" step="any"></div>
         <div><label for="stop">Stop: </label><input id="stop" type="datetime-local"></div>
       </details>
       <div><output id="result" value="-"></output></div>
     </fieldset>
-    <div class="connected">
+    <div class="connected-valid">
       <div class="main_button"><input class="button" type="submit" value="Configure"></div>
     </div>
     <div class="disconnected">
       <div class="main_button"><input class="button" id="add_device" type="button" value="Connect to device..."></div>
     </div>
   </form>
+
   <form class="connected">
     <fieldset id="device-fieldset">
       <legend>Device</legend>

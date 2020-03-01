@@ -3,12 +3,19 @@ export async function sleep(msec) {
     return new Promise(resolve => setTimeout(resolve, msec));
 }
 
-export function localTimeString(date, minutes) {
+// Returns a non-timezone date/time (using UTC) for the specified local time
+export function localTime(date) {
     if (typeof date !== 'object') return null;
     const tzOffset = (new Date()).getTimezoneOffset() * 60 * 1000;
-    const local = (new Date(date.getTime() - tzOffset)).toISOString().slice(0, -1);
-    if (minutes) return local.slice(0, -7);
-    return local;
+    return new Date(date.getTime() - tzOffset);
+}
+
+export function localTimeString(date, minutes) {
+    const local = localTime(date);    
+    if (local === null) return null;
+    const localString = local.toISOString().slice(0, -1);
+    if (minutes) return localString.slice(0, -7);
+    return localString;
 }
 
 export function localTimeValue(str) {

@@ -132,8 +132,15 @@ fieldset output {
 /* .device-connected */
 .disconnected { display: block; }
 .connected { display: none; }
+.connected-valid { display: none; }
 .device-connected .disconnected { display: none; }
 .device-connected .connected { display: block; }
+.device-connected.config-valid .connected-valid { display: block; }
+
+.incomplete { display: block; }
+.complete { display: none; }
+.completed .incomplete { display: none; }
+.completed .complete { display: block; }
 
 #duration_days, #duration_hours, #duration_minutes, #duration_seconds {
 	text-align: right;
