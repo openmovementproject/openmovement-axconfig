@@ -2,7 +2,7 @@
 
 Use the address: [`config.openmovement.dev`](https://config.openmovement.dev/).
 
-The configuration page will work on browsers that support WebUSB (e.g. *Chrome*), on platforms that have not claimed the devices' serial connection (e.g. Mac, some Android or Linux configurations).  Additional debugging is available in *Chromium*-based browsers at: `chrome://device-log`).
+The configuration page will work on browsers that support WebUSB (e.g. *Chrome*), on platforms that have not claimed the devices' serial connection (e.g. Mac, some Android or Linux configurations).  Additional debugging is available in *Chromium*-based browsers at: `chrome://device-log` and `chrome://usb-internals`).
 
 Options can be added to the address by first appending a hash (`#`), then `key=value` pairs separated with an ampersand (`&`):
 
