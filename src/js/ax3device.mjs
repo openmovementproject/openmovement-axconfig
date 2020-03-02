@@ -432,7 +432,7 @@ export default class Ax3Device {
             await this.device.claimInterface(this.io.data.interface);
         } catch (e) {
             console.log('ERROR: Problem claiming data interface (could it already be claimed by a driver?): ' + this.io.data.interface + ' -- ' + e);
-            throw e;
+            throw 'Could not claim interface (could it already be claimed by a driver?): ' + this.io.data.interface + ' -- ' + e;
         }
         console.log('...opened');
     }
@@ -869,16 +869,17 @@ export default class Ax3Device {
             }
             const cmdOut = 'Annotate' + (i < 10 ? '0' : '') + i + '=' + strip + '\r\n';
             const cmdIn = 'ANNOTATE' + (i < 10 ? '0' : '') + i + '=';
-
-            const command = new Command(`\r\n${cmdOut}\r\n`, cmdIn, 2000);
-            console.log('>>> ' + command.output);
-            const result = await this.exec(command);
-            const response = result.lastLine();
-            console.log('<<< ' + response);
-            const returnValue = response.substring(response.indexOf('=') + 1);
-            if (returnValue.trim() != strip.trim()) {
-                throw `${cmdIn} unexpected value, received "${returnValue.trim()}", expected "${strip.trim()}"`;
-            }
+            await this.tryAndRetry(async () => {
+                const command = new Command(`\r\n${cmdOut}\r\n`, cmdIn, 2000);
+                console.log('>>> ' + command.output);
+                const result = await this.exec(command);
+                const response = result.lastLine();
+                console.log('<<< ' + response);
+                const returnValue = response.substring(response.indexOf('=') + 1);
+                if (returnValue.trim() != strip.trim()) {
+                    throw `${cmdIn} unexpected value, received "${returnValue.trim()}", expected "${strip.trim()}"`;
+                }
+            });
         }
     }
 

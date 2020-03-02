@@ -58,13 +58,13 @@ export default class DeviceManager {
 
     async userAddDevice() {
         if (!navigator.usb) {
-            return false;
+            throw 'ERROR: WebUSB is not supported in this browser configuration.';
         }
         try {
             const device = await navigator.usb.requestDevice({
                 filters: [
                     { vendorId: Ax3Device.USB_DEVICE_VID, productId: Ax3Device.USB_DEVICE_PID },
-                    //{ vendorId: 0x1234, productId: 0x5678 },        // test device
+                    //{ vendorId: 0x1234, productId: 0x5678 },        // test device    // (see http://pid.codes/howto/ 0x1209)
                     //{ vendorId: 0x2345, productId: 0x6789 },        // test device
                     //{ vendorId: 0x3456, productId: 0x789A },        // test device
                     //{ vendorId: 0x4567, productId: 0x89AB },        // test device
@@ -78,10 +78,11 @@ export default class DeviceManager {
         } catch (e) {
             if (e.name == 'NotFoundError') {
                 console.log('NOTE: User did not select a device: ' + e.name + ' -- ' + e.message);
+                throw 'No device chosen.';
             } else {
                 console.log('ERROR: ' +  e + ' -- ' + e.name + ' -- ' + e.message);
+                throw 'ERROR: ' +  e + ' -- ' + e.name + ' -- ' + e.message;
             }
-            return false
         }
     }
 

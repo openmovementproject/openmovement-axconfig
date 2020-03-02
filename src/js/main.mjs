@@ -127,14 +127,19 @@ window.addEventListener('DOMContentLoaded', async (event) => {
         currentDevice = deviceManager.getSingleDevice();
         if (!currentDevice) {
             console.log('DEVICECHANGED: (none)');
-            updateStatus();
+            await updateStatus();
         } else {
             console.log('DEVICECHANGED: ' + currentDevice.serial);
             currentDevice.setStatusHandler(updateStatus);
             console.log('DEVICECHANGED: updateStatus...');
-            await currentDevice.updateStatus();
-            console.log('STATUS: ' + JSON.stringify(currentDevice.status));
-            //updateStatus();
+            try {
+                await currentDevice.updateStatus();
+                console.log('STATUS: ' + JSON.stringify(currentDevice.status));
+                //updateStatus();
+            } catch(e) {
+                console.log('DEVICECHANGED: ERROR: ' + e);
+                //setResult(e, true);
+            }
         }
     }
 
@@ -380,7 +385,11 @@ window.addEventListener('DOMContentLoaded', async (event) => {
     });
 
     document.querySelector('#add_device').addEventListener('click', async () => {
-        await deviceManager.userAddDevice();
+        try {
+            await deviceManager.userAddDevice();
+        } catch (e) {
+            setResult(e, true);
+        }
     });
 
     for (let input of ['#delay']) {
@@ -479,6 +488,8 @@ window.addEventListener('DOMContentLoaded', async (event) => {
             document.querySelector('#code').select();
             document.querySelector('#code').focus();
         }
+       
+        codeChanged(document.querySelector('#code').value);
     });
     
     if (window.applicationCache) {
