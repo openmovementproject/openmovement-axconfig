@@ -22,6 +22,12 @@ Options can be added to the address by first appending a hash (`#`), then `key=v
 The web application is cached so that it works offline.  If you are using a *Chromium*-based browser and need to force a reload of the application, visit `chrome://appcache-internals/`.
 
 
+<!--
+
+Web Serial API: chrome://flags#enable-experimental-web-platform-features
+
+-->
+
 
 <!--
 

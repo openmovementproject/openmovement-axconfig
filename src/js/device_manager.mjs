@@ -1,9 +1,11 @@
 import Ax3Device from './ax3device.mjs';
+import UsbDevice from './usb_device.mjs';
+
 
 export default class DeviceManager {
 
     constructor() {
-        this.devices = {};
+        this.usbDevices = {};
         this.warnings = [];
         if (location.protocol === 'file:') {
             this.warnings.push('WARNING: WebUSB may not work over the file: protocol (try via a web server).');
@@ -32,24 +34,24 @@ export default class DeviceManager {
         navigator.usb.addEventListener('disconnect', (event) => {
             const device = event.device;
             console.log('DEVICEMANAGER: Disconnect ' + device);
-            const axDevice = this.devices[device];
-            delete this.devices[device];
+            const axDevice = this.usbDevices[device];
+            delete this.usbDevices[device];
             if (this.changedHandler) this.changedHandler(axDevice, device, 'disconnect')
         });
     
         navigator.usb.addEventListener('connect', (event) => {
             const device = event.device;
             console.log('DEVICEMANAGER: Connect ' + device);
-            const axDevice = new Ax3Device(device);
-            this.devices[device] = axDevice;
+            const axDevice = new Ax3Device(new UsbDevice(device));
+            this.usbDevices[device] = axDevice;
             if (this.changedHandler) this.changedHandler(axDevice, device, 'connect')
         });
     
         const currentDevices = await navigator.usb.getDevices();
         for (let device of currentDevices) {
             console.log('DEVICEMANAGER: Enumerate ' + device);
-            const axDevice = new Ax3Device(device);
-            this.devices[device] = axDevice;
+            const axDevice = new Ax3Device(new UsbDevice(device));
+            this.usbDevices[device] = axDevice;
             if (this.changedHandler) this.changedHandler(axDevice, device, 'get')
         }
 
@@ -71,8 +73,8 @@ export default class DeviceManager {
                 ]
             });
             console.log('DEVICEMANAGER: Request ' + device);
-            const axDevice = new Ax3Device(device);
-            this.devices[device] = axDevice;
+            const axDevice = new Ax3Device(new UsbDevice(device));
+            this.usbDevices[device] = axDevice;
             if (this.changedHandler) this.changedHandler(axDevice, device, 'request');
             return true;
         } catch (e) {
@@ -87,12 +89,12 @@ export default class DeviceManager {
     }
 
     getSingleDevice() {
-        const numDevices = Object.keys(this.devices).length;
+        const numDevices = Object.keys(this.usbDevices).length;
         console.log('DEVICEMANAGER: Has ' + numDevices + ' device(s).')
         if (numDevices != 1) {
             return null;
         }
-        return Object.values(this.devices)[0];
+        return Object.values(this.usbDevices)[0];
     }
 
 }
