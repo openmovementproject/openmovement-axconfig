@@ -18,7 +18,20 @@ body {
 	margin: 0.5em;
 }
 
+fieldset {
+	max-width: 40em;
+	margin: 0.5em auto;
+}
+
 .main_button {
+	text-align: center;
+}
+
+h1 {
+	text-align: center;
+}
+
+#warnings {
 	text-align: center;
 }
 
@@ -89,6 +102,21 @@ body.console #output {
 	position: relative;
 	top: 2px;
 }
+
+/*input[type="button"]*/
+.button:disabled {
+	background: #dddddd;
+	cursor: not-allowed;
+}
+
+.button:disabled:hover {
+	background: #dddddd;
+}
+
+.button:disabled:active {
+	top: 0px;
+}
+
 
 form {
 	margin-bottom: 6pt;

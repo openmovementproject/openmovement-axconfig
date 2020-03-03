@@ -25,6 +25,7 @@ The web application is cached so that it works offline.  If you are using a *Chr
 <!--
 
 Web Serial API: chrome://flags#enable-experimental-web-platform-features
+... https://wicg.github.io/serial/
 
 -->
 

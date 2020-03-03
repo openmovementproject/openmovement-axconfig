@@ -64,7 +64,7 @@ let afterClearCode = false;
 const RELATIVE_CUTOFF = 946684800 * 1000;   // 2000-01-01 (treat as relative time if smaller than this)
 
 window.addEventListener('DOMContentLoaded', async (event) => {
-    const deviceManager = new DeviceManager();
+    const deviceManager = new DeviceManager(true);
 
     for (let warning of deviceManager.warnings) {
         document.getElementById('warnings').appendChild(document.createTextNode('⚠️ ' + warning));
@@ -103,7 +103,7 @@ window.addEventListener('DOMContentLoaded', async (event) => {
 
         currentDevice = deviceManager.getSingleDevice();
         if (currentDevice) {
-            status.deviceId = currentDevice.serial;
+            status.deviceId = currentDevice.serial || ((currentDevice.status && currentDevice.status.id && currentDevice.status.id.deviceId) ? currentDevice.status.id.deviceId : '-');
             if (currentDevice.status.battery !== null) {
                 status.battery = currentDevice.status.battery.percent;
             }
@@ -129,7 +129,7 @@ window.addEventListener('DOMContentLoaded', async (event) => {
             console.log('DEVICECHANGED: (none)');
             await updateStatus();
         } else {
-            console.log('DEVICECHANGED: ' + currentDevice.serial);
+            console.log('DEVICECHANGED: ' + (currentDevice.serial ? currentDevice.serial : '<no serial>'));
             currentDevice.setStatusHandler(updateStatus);
             console.log('DEVICECHANGED: updateStatus...');
             try {
@@ -137,7 +137,7 @@ window.addEventListener('DOMContentLoaded', async (event) => {
                 console.log('STATUS: ' + JSON.stringify(currentDevice.status));
                 //updateStatus();
             } catch(e) {
-                console.log('DEVICECHANGED: ERROR: ' + e);
+                console.log('DEVICECHANGED: ERROR: ' + JSON.stringify(e));
                 //setResult(e, true);
             }
         }
@@ -221,7 +221,7 @@ window.addEventListener('DOMContentLoaded', async (event) => {
             const newValue = localTimeString(start, true);
 //console.log("DELAY CHANGED?: " + parseFloat(delay) + " -> " + newValue);
             if (elem.value != newValue) {
-                console.log("UPDATE: Start updated to current time (delay " + parseFloat(delay) + " hrs): " + newValue)
+                //console.log("UPDATE: Start updated to current time (delay " + parseFloat(delay) + " hrs): " + newValue)
                 elem.value = newValue;
                 durationChanged();
             }
@@ -384,9 +384,17 @@ window.addEventListener('DOMContentLoaded', async (event) => {
         document.querySelector('body').classList.remove('completed');
     });
 
-    document.querySelector('#add_device').addEventListener('click', async () => {
+    document.querySelector('#add_usb_device').addEventListener('click', async () => {
         try {
-            await deviceManager.userAddDevice();
+            await deviceManager.userAddUsbDevice();
+        } catch (e) {
+            setResult(e, true);
+        }
+    });
+
+    document.querySelector('#add_serial_device').addEventListener('click', async () => {
+        try {
+            await deviceManager.userAddSerialDevice();
         } catch (e) {
             setResult(e, true);
         }
@@ -490,6 +498,9 @@ window.addEventListener('DOMContentLoaded', async (event) => {
         }
        
         codeChanged(document.querySelector('#code').value);
+
+        // TODO: If Web Serial API works, remove this opt-in code.
+        document.querySelector('#add_serial_device').setAttribute('style', (typeof params.allowserial !== 'undefined') ? 'display: inline;' : 'display: none;');
     });
     
     if (window.applicationCache) {
@@ -500,8 +511,16 @@ window.addEventListener('DOMContentLoaded', async (event) => {
         });
     }
 
+    if (!navigator.usb) {
+        document.querySelector('#add_usb_device').setAttribute('disabled', 'true');
+    }
+    if (!navigator.serial) {
+        document.querySelector('#add_serial_device').setAttribute('disabled', 'true');
+    }
+
     const timed = () => {
         delayChanged();
+        deviceManager.refreshDevices();
     };
 
     setInterval(timed, 15 * 1000);

@@ -86,9 +86,11 @@ class CommandState {
 
     complete(e = null) {
         if (typeof(e) !== 'undefined' && e !== null) {
+            console.log('COMMAND-REJECT: ' + e);
             this.error = e;
             this.reject(this);    
         } else {
+            console.log('COMMAND-RESOLVE');
             this.completed = true;
             this.resolve(this);
         }
@@ -190,7 +192,7 @@ export default class Ax3Device {
                 console.log('execNext(): command has no timeout');
             }
             try {
-                console.log('execNext(): write: ' + this.currentCommand.command.output);
+                console.log('execNext(): write: ' + this.currentCommand.command.output.replace(/[\r\n]/g, '|'));
                 await this.write(this.currentCommand.command.output);
                 console.log('execNext(): write: (done)');
             } catch (e) {
@@ -241,23 +243,27 @@ export default class Ax3Device {
     }
 
     async timeout() {
-        console.log('timeout(): ...');
-        this.currentTimeout = null;
-        if (this.currentCommand) {
-            console.log('timeout(): ...cancel...');
-            await this.device.cancelRead();
-            commandComplete('Timeout');
-        } else {
-            console.log('timeout(): no current command');
+        try {
+            console.log('timeout(): ...');
+            this.currentTimeout = null;
+            if (this.currentCommand) {
+                console.log('timeout(): ...cancel...');
+                await this.device.cancelRead();
+                this.commandComplete('Timeout');
+            } else {
+                console.log('timeout(): no current command');
+            }
+            console.log('timeout(): ...done');
+        } catch (e) {
+            console.log('timeout(): ERROR: ' + e);
         }
-        console.log('timeout(): ...done');
     }
 
     commandComplete(e = null) {
         if (e !== null) {
-            console.log('commandComplete(): FAILED ' + e + ' -- ' + this.currentCommand.command.output);
+            console.log('commandComplete(): FAILED ' + e + ' -- ' + (this.currentCommand ? this.currentCommand.command.output : '-'));
         } else {
-            console.log('commandComplete(): SUCCESS -- ' + this.currentCommand.command.output);
+            console.log('commandComplete(): SUCCESS -- ' + (this.currentCommand ? this.currentCommand.command.output : '-'));
         }
         if (this.currentTimeout) {
             clearTimeout(this.currentTimeout);
@@ -689,7 +695,11 @@ export default class Ax3Device {
             if (this.status.id === null || this.status.id.deviceId === null) {
                 this.status.id = await this.tryAndRetry(() => this.getId());  // id.deviceId
                 if (this.status.id.deviceId != this.serial) {
-                    throw `ERROR: Device id mismatch: reported ID=${this.status.id.deviceId} but USB serial number was ${this.serial}.`
+                    if (this.serial === null && this.device.type === 'serial') {
+                        console.log(`WARNING: Serial API did not return serial number, so not verifying reported: ID=${this.status.id.deviceId}`);
+                    } else {
+                        throw `ERROR: Device id mismatch: reported ID=${this.status.id.deviceId} but serial number was ${this.serial}.`;
+                    }
                 }
                 console.log('ID=' + JSON.stringify(this.status.id));    
             }
@@ -786,7 +796,11 @@ export default class Ax3Device {
 
             console.log('ID=' + JSON.stringify(this.status.id));
             if (this.status.id.deviceId != this.serial) {
-                throw `ERROR: Device id mismatch (was status updated first?): reported ID=${this.status.id.deviceId} but USB serial number was ${this.serial}.`
+                if (this.serial === null && this.device.type === 'serial') {
+                    console.log(`WARNING: Serial API did not return serial number, so not verifying reported: ID=${this.status.id.deviceId}`);
+                } else {
+                    throw `ERROR: Device id mismatch (was status updated first?): reported ID=${this.status.id.deviceId} but USB serial number was ${this.serial}.`
+                }
             }
 
             await this.tryAndRetry(() => this.setLed(config.configLed));

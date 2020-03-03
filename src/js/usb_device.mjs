@@ -118,6 +118,7 @@ export default class UsbDevice {
 
     constructor(device) {
         this.device = device;
+        this.type = 'usb';
         this.productName = this.device.productName;
         this.manufacturerName = this.device.manufacturerName;
         this.serialNumber = this.device.serialNumber;
@@ -202,7 +203,7 @@ export default class UsbDevice {
 
 
     async write(message) {
-        console.log('SEND: ' + message);
+        console.log('SEND: ' + message.replace(/[\r\n]/g, '|'));
         let outBuffer = encoder.encode(message);
         console.log('===: ' + outBuffer);
         try {
