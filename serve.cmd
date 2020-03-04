@@ -2,12 +2,15 @@
 rem openssl req -newkey rsa:2048 -new -nodes -keyout key.pem -out csr.pem && openssl x509 -req -days 365 -in csr.pem -signkey key.pem -out server.crt
 rem http-server -S -K key.pem -C server.crt
 
+::: Build
+:::npm run build
+
 ::: Kill existing processes
 taskkill /im "ngrok.exe" >nul
 taskkill /im cmd.exe /fi "WINDOWTITLE eq http-server*"
 
-::: Live server on port 8080 (rather than parcel's dev mode on port 1234) as this WebSocket works through ngrok's https
-start "http-server" live-server --no-browser dist
+::: HTTP server on port 8080
+start "http-server" http-server docs
 
 ::: Ngrok to make public
 start "ngrok" ngrok http 8080
@@ -28,5 +31,5 @@ rem adb shell am start -n com.android.chrome/org.chromium.chrome.browser.ChromeT
 rem (open local Chrome and use "Send to your devices" to open on phone).
 IF NOT "%TUNNEL%"=="" start chrome.exe "%TUNNEL%#debug&nodetails&config=0"
 
-::: Start parcel's watch mode
-npm run dev
+echo Rebuild then refresh:
+echo   npm run build

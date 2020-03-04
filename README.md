@@ -19,7 +19,7 @@ Options can be added to the address by first appending a hash (`#`), then `key=v
 
 ...an example URL with multiple options: `https://config.openmovement.dev/#readonly&nodetails&rate=100&range=8&start=0&stop=168`.  If you wanted to add a *Study Code*, something like this: `https://config.openmovement.dev/#readonly&nodetails&rate=100&range=8&start=0&stop=168&metadata=_s%3dMy_Study_Name`.  And if you also knew the recording identifier, it can be embedded into the link: `https://config.openmovement.dev/#readonly&nodetails&rate=100&range=8&start=0&stop=168&metadata=_s%3dMy_Study_Name&code=123abc456`.
 
-The web application is cached so that it works offline.  If you are using a *Chromium*-based browser and need to force a reload of the application, visit `chrome://appcache-internals/`.
+The web application is cached so that it works offline.  If you are using a *Chromium*-based browser and need to force a reload of the application, visit `chrome://appcache-internals/` and/or `chrome://serviceworker-internals`.
 
 
 <!--

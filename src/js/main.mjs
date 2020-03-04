@@ -57,7 +57,7 @@ let globalParams = {};
 let showDebug = false;
 let domLoaded = false;
 let allowUsb = true;
-let allowSerial = false;
+let allowSerial = true;
 
 // Don't redirect console unless debug view is enabled (will require refresh if #debug added)
 let redirected = false;
@@ -70,6 +70,55 @@ function redirect() {
 }
 watchParameters(parametersChanged);
 if (showDebug) { redirect(); }
+
+
+
+// Service Worker Registration
+if (false)  // TODO: Remove
+if ('serviceWorker' in navigator) {
+    // Wait until page is loaded
+    window.addEventListener('load', async function() {
+        try {
+            // Load 'service-worker.js', must be in a top-level directory.
+            const serviceWorkerFile = 'service-worker.js';
+            const reg = await navigator.serviceWorker.register(serviceWorkerFile);
+            // If service-worker.js changes...
+            reg.onupdatefound = function() {
+                const installing = reg.installing;
+                installing.onstatechange = function() {
+                    switch (installing.state) {
+                        case 'installed':
+                            if (navigator.serviceWorker.controller) {
+                                console.log('SERVICEWORKER: New content available.');
+                                if (confirm('[ServiceWorker] Update available -- reload now?')) {
+                                    window.location.reload();
+                                }
+                            } else {
+                                console.log('SERVICEWORKER: Now available offline.');
+                            }
+                            break;
+                        case 'redundant':
+                            console.log('SERVICEWORKER: Installing worker was redundant.');
+                            break;
+                    }
+                };
+            };
+        } catch (e) {
+            console.log('SERVICEWORKER: Error during registration: ' + e);
+        }
+    });
+}
+
+// Old appcache
+if (window.applicationCache) {
+    applicationCache.addEventListener('updateready', function() {
+        if (confirm('[AppCache] Update available -- reload now?')) {
+            window.location.reload();
+        }
+    });
+}
+
+
 
 let currentDevice = null;
 let lastConfig = {};
@@ -153,6 +202,11 @@ function parametersChanged(params = globalParams) {
 
     document.querySelector('#add_usb_device').setAttribute('style', allowUsb ? 'display: inline;' : 'display: none;');
     document.querySelector('#add_serial_device').setAttribute('style', allowSerial ? 'display: inline;' : 'display: none;');
+
+    // Always remove when not supported
+    if (!navigator.serial) {
+        document.querySelector('#add_serial_device').setAttribute('style', 'display: none;');
+    }
 }
 
 
@@ -532,14 +586,6 @@ window.addEventListener('DOMContentLoaded', async (event) => {
     }
 
     clearConfig();
-    
-    if (window.applicationCache) {
-        applicationCache.addEventListener('updateready', function() {
-            if (confirm('Update available -- reload now?')) {
-                window.location.reload();
-            }
-        });
-    }
 
     if (!navigator.usb) {
         document.querySelector('#add_usb_device').setAttribute('disabled', 'true');

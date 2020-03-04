@@ -39,8 +39,8 @@ export default class DeviceManager {
             }
         }
         */
-        if (navigator.usb && navigator.appVersion.indexOf('(Windows') >= 0 && (!enableSerial || !navigator.serial)) {
-            this.warnings.push('WARNING: WebUSB will not work on Windows as standard (CDC devices claimed by the driver).');
+        if (enableUsb && navigator.usb && navigator.appVersion.indexOf('(Windows') >= 0 && (!enableSerial || !navigator.serial)) {
+            this.warnings.push('WARNING: WebUSB will not work on Windows as standard (CDC devices claimed by the driver). ' + (enableSerial ? ' You can try enabling the experimental Web Serial API at: chrome://flags#enable-experimental-web-platform-features' : ''));
         }
         for (let warning of this.warnings) {
             console.log(warning);

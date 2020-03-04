@@ -157,6 +157,19 @@ fieldset output {
 	flex-grow: 1;
 }
 
+summary {
+	font-size: small;
+	cursor: pointer;
+}
+
+summary::after {
+	content: "...";	
+}
+
+.version {
+	color: #ccc;
+}
+
 /* .device-connected */
 .disconnected { display: block; }
 .connected { display: none; }

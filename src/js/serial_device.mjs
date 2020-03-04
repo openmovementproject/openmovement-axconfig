@@ -98,11 +98,11 @@ console.log('<<< [' + this.buffer.length + '] ' + value);
     async close() {
         try {
             console.log('CLOSE: reader=' + (this.reader ? JSON.stringify(this.reader) : 'n/a'));
-            try { await this.reader.cancel(); } catch (e) { console.log('ERROR: Problem cancelling reader: ' + e); }
+            try { if (this.reader) await this.reader.cancel(); } catch (e) { console.log('ERROR: Problem cancelling reader: ' + e); }
             try { await this.inputDone.catch(() => {}) } catch (e) { console.log('ERROR: Problem waiting for inputDone: ' + e); }
             if (this.port.readable.locked) {
                 console.log('!!! UNEXPECTED: Port readable was still locked -- expected to be released when stream flagged done.');
-                this.reader.releaseLock();
+                if (this.reader) this.reader.releaseLock();
             }
             this.reader = null;
             try {
