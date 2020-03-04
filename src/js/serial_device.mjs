@@ -27,6 +27,14 @@ export default class SerialDevice {
     }
 
 
+    internalStartRead() {
+        try {
+            this.reader.read().then(this.internalRead.bind(this))
+        } catch (e) {
+            console.log("ERROR: Problem in reader while starting read -- reader may be broken now: " + e);
+        }
+    }
+
     internalRead({ done, value }) {
         try {
 console.log('*** ' + JSON.stringify({value, done}))
@@ -37,45 +45,39 @@ console.log('<<< [' + this.buffer.length + '] ' + value);
             if (done) {
                 console.log("READER: Stream end");
                 this.reader.releaseLock();
+                this.reader = null;
                 // End read loop
                 return;
             }
         } catch (e) {
-            console.log("ERROR: Problem in reader -- reader will be broken now: " + e);
+            console.log("ERROR: Problem in reader while completing read -- reader may be broken now: " + e);
         }
-        // Continue read loop
-        return this.reader.read().then(this.internalRead.bind(this));
+        // Continue read loop (clean callstack)
+        setTimeout(this.internalStartRead.bind(this), 0);
     }
 
 
     async open() {
         try {
-// TODO: Should always do the below !!!
-//if (this.openFlag) { throw "Port already open"; }
+            if (this.openFlag) { throw "Port already open"; }
 
-            if (!this.openFlag) {
-                const options = {
-                    baudrate: 9600,
-                }
-                await this.port.open(options);
+            const options = {
+                baudrate: 9600,
             }
+            await this.port.open(options);
 
-            if (!this.writer) {
-                this.encoder = new TextEncoderStream();
-                this.outputDone = this.encoder.readable.pipeTo(this.port.writable);
-                this.outputStream = this.encoder.writable;
-                this.writer = this.outputStream.getWriter();
-            }
+            this.encoder = new TextEncoderStream();
+            this.outputDone = this.encoder.readable.pipeTo(this.port.writable);
+            this.outputStream = this.encoder.writable;
+            this.writer = null;
 
-            if (!this.reader) {
-                this.decoder = new TextDecoderStream();
-                this.inputDone = this.port.readable.pipeTo(this.decoder.writable);
-                this.inputStream = this.decoder.readable;
-                this.reader = this.inputStream.getReader();
-            }
+            this.decoder = new TextDecoderStream();
+            this.inputDone = this.port.readable.pipeTo(this.decoder.writable);
+            this.inputStream = this.decoder.readable;
+            this.reader = this.inputStream.getReader();
 
             // Start read loop
-            this.internalRead({ done: false, value: null });
+            this.internalStartRead();
 
             this.openFlag = true;
             this.unopenable = false;
@@ -95,26 +97,24 @@ console.log('<<< [' + this.buffer.length + '] ' + value);
 
     async close() {
         try {
-// TODO: Uncomment this !!!
-if (false) {
-            if (this.reader !== null) {
-                console.log('CLOSE: reader=' + (this.reader ? JSON.stringify(this.reader) : 'n/a'));
-                try { await this.reader.cancel(); } catch (e) { console.log('ERROR: Problem cancelling reader: ' + e); }
+            console.log('CLOSE: reader=' + (this.reader ? JSON.stringify(this.reader) : 'n/a'));
+            try { await this.reader.cancel(); } catch (e) { console.log('ERROR: Problem cancelling reader: ' + e); }
+            try { await this.inputDone.catch(() => {}) } catch (e) { console.log('ERROR: Problem waiting for inputDone: ' + e); }
+            if (this.port.readable.locked) {
+                console.log('!!! UNEXPECTED: Port readable was still locked -- expected to be released when stream flagged done.');
                 this.reader.releaseLock();
-                this.reader = null;
             }
-            if (this.writer !== null) {
-                console.log('CLOSE: writer=' + (this.writer ? JSON.stringify(this.writer) : 'n/a'));
-console.dir(this.writer);
-                this.writer.releaseLock();
-                this.writer = null;
-console.dir(this.encoder);
-console.dir(this.outputDone);
-console.dir(this.outputStream);
+            this.reader = null;
+            try {
+                await this.outputStream.getWriter().close();
+                this.outputStream = null;
             }
-console.dir(this.port);
-await sleep(1000);
-}
+            catch (e) { console.log('ERROR: Problem closing writer: ' + e); }
+            try {
+                await this.outputDone;
+                this.outputDone = null;
+            }
+            catch (e) { console.log('ERROR: Problem waiting for outputDone: ' + e); }
         } catch (e) {
             console.log('WARNING: Problem cancelling/unlocking: ' + e);
         } finally {
@@ -137,29 +137,19 @@ await sleep(1000);
     async write(message) {
         console.log('SEND: ' + message.replace(/[\r\n]/g, '|'));
         try {
-/*
-            if (!this.writer) {
-                this.encoder = new TextEncoderStream();
-                this.outputDone = this.encoder.readable.pipeTo(this.port.writable);
-                this.outputStream = this.encoder.writable;
-                this.writer = this.outputStream.getWriter();
+            if (this.writer) {
+                console.log('UNEXPECTED: Writer already exists');
             }
-*/
-            if (!this.writer) throw 'No writer!';
+            this.writer = this.outputStream.getWriter();
             await this.writer.write(message);
         } catch (e) {
             console.log('WARNING: Problem writing data: ' + e);
             throw e;
         } finally { 
-/*
             if (this.writer) {
                 this.writer.releaseLock();
                 this.writer = null;
-                if (this.port.writable.locked) {
-                    console.error("WARNING: Port writable is still locked (will not close).");
-                }
             }
-*/
         }
     }
 

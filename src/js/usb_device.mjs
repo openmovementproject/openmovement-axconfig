@@ -265,7 +265,7 @@ export default class UsbDevice {
             console.log('cancelRead() - ' + this.io.data.endpointRead);
             await this.device.clearHalt('in', this.io.data.endpointRead);
             console.log('cancelRead() - done');
-                return true;
+            return true;
         } catch (e) {
             console.log('WARNING: Problem cancelling read: ' + this.io.data.endpointRead + ' -- ' + e);
             return false;

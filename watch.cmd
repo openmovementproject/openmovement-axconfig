@@ -23,7 +23,7 @@ FOR /F "tokens=* USEBACKQ" %%F IN (`curl -s http://127.0.0.1:4040/api/tunnels ^|
   SET TUNNEL=%%F
 )
 IF "%TUNNEL%"=="" GOTO wait_for_ngrok
-ECHO TUNNEL= %TUNNEL%
+ECHO TUNNEL= %TUNNEL%#debug&allowserial&nodetails&config=0
 rem adb shell am start -n com.android.chrome/org.chromium.chrome.browser.ChromeTabbedActivity -d "%TUNNEL%" --activity-clear-task
 rem (open local Chrome and use "Send to your devices" to open on phone).
 IF NOT "%TUNNEL%"=="" start chrome.exe "%TUNNEL%"
