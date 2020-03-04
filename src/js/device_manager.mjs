@@ -190,8 +190,10 @@ export default class DeviceManager {
 
     getSingleDevice() {
         const numDevices = Object.keys(this.usbDevices).length + Object.keys(this.serialDevices).length;
-        console.log('DEVICEMANAGER: Has ' + numDevices + ' device(s).')
-        if (numDevices !== 1) return null;   // Do not choose any device if it is ambiguous
+        if (numDevices !== 1) {
+            console.log('ERROR: DeviceManager has ' + numDevices + ' device(s) -- this will only work for a single device.')
+            return null;   // Do not choose any device if it is ambiguous
+        }
         if (Object.keys(this.usbDevices).length > 0) return Object.values(this.usbDevices)[0];
         if (Object.keys(this.serialDevices).length > 0) return Object.values(this.serialDevices)[0];
         return null;

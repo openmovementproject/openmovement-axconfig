@@ -167,11 +167,6 @@ console.log('<<< [' + this.buffer.length + '] ' + value);
             return null;
         }
         console.log('RECV: ' + (reply === null ? '<null>' : reply.replace(/[\r\n]/g, '|')));
-
-        // Rather than tight poll (but this is not the best place -- move to calling process)
-        if (reply === null) {
-            await sleep(200);
-        }
         return reply;
     }
 

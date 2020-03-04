@@ -214,6 +214,14 @@ export default class Ax3Device {
                 console.log('execNext(): read exception: ' + e);
                 this.commandComplete(e);
             }
+            if (data === null && this.device.type === 'serial') {
+                if (data === null) {
+                    // Seems to be some glitch in not delivering buffered content, new bytes incoming seem to help...
+                    await this.write('\r\n');
+                    // Rather than tight poll on serial (where actual read is async)
+                    await sleep(100);
+                }
+            }
             if (this.currentCommand && data !== null) {
                 console.log('execNext(): adding data ' + data.length);
                 this.receiveBuffer += data;
@@ -632,8 +640,8 @@ export default class Ax3Device {
             const cmdOut = 'Annotate' + (i < 10 ? '0' : '') + i + '=' + strip + '\r\n';
             const cmdIn = 'ANNOTATE' + (i < 10 ? '0' : '') + i + '=';
             await this.tryAndRetry(async () => {
-                const command = new Command(`\r\n${cmdOut}\r\n`, cmdIn, 2000);
-                console.log('>>> ' + command.output);
+                const command = new Command(`\r\n${cmdOut}\r\n`, cmdIn, 1000);
+                console.log('>>> ' + command.output + '|');
                 const result = await this.exec(command);
                 const response = result.lastLine();
                 console.log('<<< ' + response);
