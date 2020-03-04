@@ -6,7 +6,7 @@ import Ax3Device from './ax3device.mjs';
 
 export default class DeviceManager {
 
-    constructor(enableSerial) {
+    constructor(enableUsb, enableSerial) {
         this.enableSerial = enableSerial;
         this.usbDevices = {};
         this.serialDevices = {};

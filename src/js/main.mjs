@@ -56,6 +56,8 @@ window.addEventListener("unhandledrejection", function (e) {
 let globalParams = {};
 let showDebug = false;
 let domLoaded = false;
+let allowUsb = true;
+let allowSerial = false;
 
 // Don't redirect console unless debug view is enabled (will require refresh if #debug added)
 let redirected = false;
@@ -85,6 +87,12 @@ function parametersChanged(params = globalParams) {
     if (typeof params.nodebug !== 'undefined') showDebug = false;
     if (typeof params.debug !== 'undefined') showDebug = true;
     if (showDebug) { redirect(); }
+
+    if (typeof params.allowserial !== 'undefined') allowSerial = true;
+    if (typeof params.noserial !== 'undefined') allowSerial = false;
+
+    if (typeof params.allowusb !== 'undefined') allowUsb = true;
+    if (typeof params.nousb !== 'undefined') allowUsb = false;
 
     // Everything else here requires DOM
     if (!domLoaded) return;
@@ -143,8 +151,8 @@ function parametersChanged(params = globalParams) {
    
     codeChanged(document.querySelector('#code').value);
 
-    // TODO: If Web Serial API works, remove this opt-in code.
-    document.querySelector('#add_serial_device').setAttribute('style', (typeof params.allowserial !== 'undefined') ? 'display: inline;' : 'display: none;');
+    document.querySelector('#add_usb_device').setAttribute('style', allowUsb ? 'display: inline;' : 'display: none;');
+    document.querySelector('#add_serial_device').setAttribute('style', allowSerial ? 'display: inline;' : 'display: none;');
 }
 
 
@@ -457,7 +465,7 @@ const submit = async () => {
 window.addEventListener('DOMContentLoaded', async (event) => {
     domLoaded = true;
 
-    deviceManager = new DeviceManager(true);
+    deviceManager = new DeviceManager(allowUsb, allowSerial);
 
     for (let warning of deviceManager.warnings) {
         document.getElementById('warnings').appendChild(document.createTextNode('⚠️ ' + warning));
