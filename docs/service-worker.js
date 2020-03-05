@@ -8,18 +8,16 @@ const urls = [
   '/icon128.png',
 ];
 
-self.addEventListener('fetch', function (event) {
-  //console.log('SERVICEWORKER: Request: ' + evt.request.url);
+self.addEventListener('fetch', (event) => {
+  //console.log('SERVICEWORKER: Request: ' + event.request.url);
   event.respondWith(
-    caches.match(event.request).then(function (request) {
-      if (request) {
-        //console.log('SERVICEWORKER: From cache: ' + evt.request.url);
-        return request;
+    caches.match(event.request).then(async (response) => {
+      if (response) {
+        console.log('SERVICEWORKER: Respond from cache: ' + event.request.url);
+        return response;
       } else {
-        //const newUrl = evt.request.url + '?version=' + cacheName;
-        //console.log('SERVICEWORKER: From fetch: ' + newUrl);
-        //return fetch(new Request(newUrl), event.request);
-        return fetch(request);
+        console.log('SERVICEWORKER: Respond with fetch: ' + event.request.url);
+        return await fetch(event.request);
       }
     })
   );
@@ -27,9 +25,22 @@ self.addEventListener('fetch', function (event) {
 
 self.addEventListener('install', function (event) {
   console.log('SERVICEWORKER: Installing version: ' + cacheName);
+  self.skipWaiting();
   event.waitUntil(
     caches.open(cacheName).then(function (cache) {
-      return cache.addAll(urls)
+      //return cache.addAll(urls)
+      return Promise.all(
+        Array.from(urls.values()).map(function(url) {
+          const actualUrl = url + '?' + cacheName;    // Prevent cache
+          const request = new Request(actualUrl, {credentials: 'same-origin'});
+          return fetch(request).then(function(response) {
+            if (!response.ok) {
+                throw new Error('Request for ' + url + ' had status ' + response.status);
+            }
+            return cache.put(url, response);
+          });
+        })
+      );
     })
   );
 });
@@ -47,4 +58,4 @@ self.addEventListener('activate', function (event) {
   );
 });
 
-const cacheName = 'v' /* STRING TO BE COMPLETED AT BUILD TIME */ + '20200304171836366';
+const cacheName = 'v' /* STRING TO BE COMPLETED AT BUILD TIME */ + '20200305160504678';

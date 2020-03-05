@@ -74,7 +74,6 @@ if (showDebug) { redirect(); }
 
 
 // Service Worker Registration
-if (false)  // TODO: Remove
 if ('serviceWorker' in navigator) {
     // Wait until page is loaded
     window.addEventListener('load', async function() {
