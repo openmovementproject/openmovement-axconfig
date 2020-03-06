@@ -75,10 +75,9 @@ export default class DeviceManager {
 
 
     async refreshDevices() {
-
         /*
-        const usbSeen = {};
         if (navigator.usb) {
+            const usbSeen = {};
             const currentDevices = await navigator.usb.getDevices();
             for (let device of currentDevices) {
                 usbSeen[device] = device;
@@ -89,24 +88,32 @@ export default class DeviceManager {
                     if (this.changedHandler) this.changedHandler(axDevice, device, 'get')
                 }
             }
-        }
-        for (let device of Object.keys(this.usbDevices)) {
-            if (!(device in usbSeen)) {
-                console.log('DEVICEMANAGER: USB Enumerate device lost ' + device);
-                const axDevice = this.usbDevices[device];
-                if (this.changedHandler) this.changedHandler(axDevice, device, 'disconnect')
-                delete this.usbDevices[device];
+            for (let device of Object.keys(this.usbDevices)) {
+                if (!(device in usbSeen)) {
+                    console.log('DEVICEMANAGER: USB Enumerate device lost ' + device);
+                    const axDevice = this.usbDevices[device];
+                    if (this.changedHandler) this.changedHandler(axDevice, device, 'disconnect')
+                    delete this.usbDevices[device];
+                }
             }
         }
         */
 
         // Poll serial devices to determine what's still connected (TODO: better detection of disconnect?)
-        const serialSeen = {};
         if (navigator.serial) {
+            const serialSeen = {};
             if (!navigator.serial.getPorts) {
                 //console.log('DEVICEMANAGER: Serial enumerate not available.');
             } else {
-                const currentPorts = await navigator.serial.getPorts();
+                let currentPorts = [];
+                try {
+                    currentPorts = await navigator.serial.getPorts();
+                } catch (e) {
+                    if (!this.firstSerialEnumerateError) {
+                        this.firstSerialEnumerateError = true;
+                        console.log('ERROR: Problem enumerating serial devices: ' + e + ' -- ' + JSON.stringify(e));
+                    }
+                }
                 for (let port of currentPorts) {
                     serialSeen[port] = port;
                     if (!(port in this.serialDevices)) {
@@ -117,13 +124,13 @@ export default class DeviceManager {
                     }
                 }
             }
-        }
-        for (let port of Object.keys(this.serialDevices)) {
-            if (!(port in serialSeen)) {
-                console.log('DEVICEMANAGER: Serial Enumerate device lost ' + port);
-                const axDevice = this.serialDevices[port];
-                if (this.changedHandler) this.changedHandler(axDevice, port, 'disconnect')
-                delete this.serialDevices[port];
+            for (let port of Object.keys(this.serialDevices)) {
+                if (!(port in serialSeen)) {
+                    console.log('DEVICEMANAGER: Serial Enumerate device lost ' + port);
+                    const axDevice = this.serialDevices[port];
+                    if (this.changedHandler) this.changedHandler(axDevice, port, 'disconnect')
+                    delete this.serialDevices[port];
+                }
             }
         }
     }

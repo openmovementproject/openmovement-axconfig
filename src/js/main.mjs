@@ -420,15 +420,15 @@ const upsertMetadata = (metadata, id, newValue) => {
     if (metadata.length > 0 && metadata[0] == '?') { metadata = metadata.slice(1); }
     const parts = metadata.split('&');
     const components = [];
-    let updated = false;
+    let found = false;
     for (let part of parts) {
         const equals = part.indexOf('=');
         const key = decodeURIComponent((equals >= 0) ? part.slice(0, equals) : part).replace(/\+/g, ' ');
         if (key.length <= 0) continue;
         //const value = decodeURIComponent((equals >= 0) ? part.slice(equals + 1) : '').replace(/\+/g, ' ');
         if (key == id) {
-            if (!updated) {
-                updated = true;
+            if (!found) {
+                found = true;
                 if (newValue !== null) {
                     components.push(encodeURIComponent(key) + '=' + encodeURIComponent(newValue));
                 }
@@ -438,7 +438,7 @@ const upsertMetadata = (metadata, id, newValue) => {
             components.push(part);
         }
     }
-    if (!updated) {
+    if (!found && newValue !== null) {
         components.push(encodeURIComponent(id) + '=' + encodeURIComponent(newValue));
     }
     return components.join('&');
@@ -476,7 +476,7 @@ const codeChanged = (code) => {
     //const sessionId = parseInt('0' + code.replace(/[^A-Za-z0-9]/g, '').replace(/[^0-9]/g, '0').slice(-9))
     document.querySelector('#session').value = sessionId;
 
-    document.querySelector('#metadata').value = upsertMetadata(document.querySelector('#metadata').value, '_sc', code);
+    document.querySelector('#metadata').value = upsertMetadata(document.querySelector('#metadata').value, '_sc', code.length == 0 ? null : code);
     
     updateEnabled();
 };

@@ -167,8 +167,29 @@ summary::after {
 }
 
 .version {
+	font-size: small;
 	color: #ccc;
 }
+
+footer {
+	margin-top: 1em;
+}
+
+footer div {
+	color: #333;
+	font-size: small;
+	text-align: center;
+}
+
+footer a {
+	color: #777;
+	text-decoration: none;
+}
+
+footer a:hover, footer a:active {
+	text-decoration: underline;
+}
+
 
 /* .device-connected */
 .disconnected { display: block; }

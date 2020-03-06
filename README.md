@@ -1,8 +1,35 @@
-# AX3 Web Configuration
+# AX Device Web Configuration Tool
 
-Use the address: [`config.openmovement.dev`](https://config.openmovement.dev/).
+This is a web-based configuration tool for [AX Devices](https://github.com/digitalinteraction/openmovement/wiki/AX3) (currently AX3 or AX6 in accelerometer-only mode), and is part of the [Open Movement](https://openmovement.dev/) project.
 
-The configuration page will work on browsers that support WebUSB (e.g. *Chrome*), on platforms that have not claimed the devices' serial connection (e.g. Mac, some Android or Linux configurations).  Additional debugging is available in *Chromium*-based browsers at: `chrome://device-log` and `chrome://usb-internals`).
+To configure a device:
+
+1. Visit the address: [`config.openmovement.dev`](https://config.openmovement.dev/)
+
+2. Connect the device.  You may only configure one device at a time.  If on a mobile phone or tablet, you may need a special adapter or cable from your mobile USB Micro-B female, or USB C female port, to the device's USB Micro-B female port. 
+
+3. Choose *Connect USB device...* on Android/Mac, or *Connect Serial device...* on Windows (if this option does not appear, see below for how to enable it).
+
+4. Select your device and click *Connect*.
+
+5. Enter your configuration *Code* (which will be used to identify the recording).
+
+6. Check that the details of the recording configuration are correct.  If you use the same details for multiple devices, consider altering the URL as described below and bookmarking the page to fix these values.
+
+7. Verify that the device's current state and battery level is suitable, then select *Configure* to program the device.
+
+
+
+## How it communicates
+
+There are two methods of communication to devices on supported browsers (e.g. *Chrome*):
+
+* *WebUSB* should work on platforms that have not claimed the device's serial connection (e.g. Mac and some Android configurations).  Additional debugging may be available in your browser at: `chrome://device-log` and `chrome://usb-internals`.
+
+* *Web Serial API*  should work on platforms that claim the device's serial connection where the browser implementation is available (e.g. Windows).  This may not be enabled by default, but may be enabled (in, e.g., Chrome) at `chrome://flags#enable-experimental-web-platform-features`.
+
+
+## URL-based options
 
 Options can be added to the address by first appending a hash (`#`), then `key=value` pairs separated with an ampersand (`&`):
 
@@ -19,15 +46,10 @@ Options can be added to the address by first appending a hash (`#`), then `key=v
 
 ...an example URL with multiple options: `https://config.openmovement.dev/#readonly&nodetails&rate=100&range=8&start=0&stop=168`.  If you wanted to add a *Study Code*, something like this: `https://config.openmovement.dev/#readonly&nodetails&rate=100&range=8&start=0&stop=168&metadata=_s%3dMy_Study_Name`.  And if you also knew the recording identifier, it can be embedded into the link: `https://config.openmovement.dev/#readonly&nodetails&rate=100&range=8&start=0&stop=168&metadata=_s%3dMy_Study_Name&code=123abc456`.
 
-The web application is cached so that it works offline.  If you are using a *Chromium*-based browser and need to force a reload of the application, visit `chrome://appcache-internals/` and/or `chrome://serviceworker-internals`.
 
+## Offline
 
-<!--
-
-Web Serial API: chrome://flags#enable-experimental-web-platform-features
-... https://wicg.github.io/serial/
-
--->
+The web application is cached so that it works offline.  In Chrome-based browsers, see `chrome://serviceworker-internals` (or `chrome://appcache-internals/` for earlier versions of this application).  The application is also a *Progressive Web App* and can be installed to the user's desktop/home screen/launcher.
 
 
 <!--
@@ -68,232 +90,5 @@ ATTR{idVendor}=="04d8", ATTR{idProduct}=="0057", ENV{ID_MM_TTY_MANUAL_SCAN_ONLY}
 ```
 
 ...then reload and reprocess the device rules: `sudo udevadm control --reload-rules && udevadm trigger`.
-
--->
-
-
-
-<!--
-chrome://appcache-internals/
-
-Notes:
-
-* Will not work on Windows, as the device has to be controlled by `WinUSB`
-* Does not work over the `file:` protocol -- to fix, for example, use `http-server` and [http://localhost:8080/index.html](http://localhost:8080/index.html)
-* Package into library
-* Settings string (as URL)
-* Download local log of configured devices (optionally clear after download), or send to another server.
-* Consider adding camera barcode scan?
-* Consider file inspection to detect data
--->
-
-<!--
-
-https://digitalinteraction.github.io/openmovement-axconfig/
-https://config.openmovement.dev/
-
-npm run build
--->
-
-<!--
-
-Time of day:
-  hh       - exact hour of the day, xx:00:00
-  hhmm     - exact minute of the day, xx:xx:00
-  hhmmss   - exact time of the day
-  ?? h        - relative hour delay 0-9
-  ?? hhh      - relative hour delay
-
-Day:
-  D        - relative day from today's date 0-9
-  DD       - day of the month, next month if more than 14 days ago
-  hhh      - day containing the time relative to now plus the specified hours
-  MMDD     - month and day, next year if more than 6 months ago
-  YYMMDD   - exact date, 20xx year
-  YYYYMMDD - exact date
-
--->
-
-
-<!--
-
-this.SessionId = sessionId;     // 0
-this.Start = start;             // 
-this.Duration = duration;       // 24 * 7 * 60 * 60 = 604800
-this.Rate = rate;               // 100 (6, 12, 25, 50, 100, 200, 400, 800, 1600, 3200)
-this.Range = range;             // 8 (2, 4, 8, 16)
-
-
-AX3-Deploy Config Strings
-
-
-        //    20180217091500
-        // 14 YYYYMMDDhhmmss
-        // 12   YYMMDDhhmmss
-        // 10   YYMMDDhhmm
-        //  8   YYMMDDhh
-        //  6     MMDDhh
-        //  4     MMDD
-        //  2       DD
-        // r=rate (100Hz), g=range (+/-8g), d=duration (hours), b=begin (YYMMDDhh[mm]), s=session (9 digits)
-        private long lastInput = 0;
-        private bool inputFinished = true;
-        public string lastInputString = null;
-        public void ForgetLastInput() { lastInputString = null; }
-
-        private DateTime? ParseDateTime(string value)
-        {
-            DateTime now = DateTime.Now;
-            int year = -1;  // auto
-            int month = -1; // auto
-            int day = -1;   // auto
-            int hour = 0;   // default midnight
-            int minute = 0; // default o'clock
-            int second = 0; // default zero
-
-            if (value == null) { Console.WriteLine("ERROR: Date null"); return null; }
-            value = value.Trim().ToLower();
-            if (value.Length <= 0) { Console.WriteLine("ERROR: Date empty"); return null; }
-            if (value.Length % 2 != 0) { Console.WriteLine("ERROR: Date non-even digits"); return null; } // must be even length
-            if (value.Length < 2 || value.Length > 14) { Console.WriteLine("ERROR: Date invalid length"); return null; }
-
-            // Seconds (suffix)
-            if (value.Length >= 12)
-            {
-                second = int.Parse(value.Substring(value.Length - 2));
-                value = value.Substring(0, value.Length - 2);
-            }
-
-            // Minutes (suffix)
-            if (value.Length >= 10)
-            {
-                minute = int.Parse(value.Substring(value.Length - 2));
-                value = value.Substring(0, value.Length - 2);
-            }
-
-            // Year (prefix)
-            if (value.Length >= 8)
-            {
-                if (value.Length >= 10)
-                {
-                    year = int.Parse(value.Substring(0, 4));
-                    value = value.Substring(4);
-                }
-                else
-                {
-                    year = int.Parse(value.Substring(0, 2)) + 2000;
-                    value = value.Substring(2);
-                }
-            }
-
-            // Hours (suffix)
-            if (value.Length >= 6)
-            {
-                hour = int.Parse(value.Substring(value.Length - 2));
-                value = value.Substring(0, value.Length - 2);
-            }
-
-            // Months (prefix)
-            if (value.Length >= 4)
-            {
-                month = int.Parse(value.Substring(0, 2));
-                value = value.Substring(2);
-            }
-
-            // Days (prefix)
-            if (value.Length >= 2)
-            {
-                day = int.Parse(value.Substring(0, 2));
-                value = value.Substring(2);
-            }
-
-            // Automatic day
-            if (day < 0) { day = now.Day; }
-
-            // Automatic month
-            if (month < 0) { month = (now.Month + ((day < now.Day) ? 1 : 0) - 1) % 12 + 1; }
-
-            // Automatic year
-            if (year < 0) { year = now.Year + ((month < now.Month) ? 1 : 0); }
-
-            try
-            {
-                return new DateTime(year, month, day, hour, minute, second);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"ERROR: Problem constructing date ({e.Message}) for {year}-{month}-{day} {hour}:{minute}:{second}");
-                return null;
-            }
-        }
-
-        public Configuration ParseConfig(string value)
-        {
-            try
-            {
-                Configuration configuration = new Configuration();
-                if (value == null) { return null; }
-                value = value.Trim().ToLower();
-                char currentSetting = (char)0;
-                string currentValue = "";
-                for (int i = 0; i <= value.Length; i++)
-                {
-                    char c = (i < value.Length) ? value[i] : (char)0;
-                    if (c >= '0' && c <= '9')
-                    {
-                        currentValue += c;
-                    }
-                    else
-                    {
-                        if (currentValue.Length > 0)
-                        {
-                            // Default setting for bare values
-                            if (currentSetting == (char)0)
-                            {
-                                currentSetting = 's';
-                            }
-
-                            switch (currentSetting)
-                            {
-                                case 's':
-                                    configuration.SessionId = uint.Parse(currentValue);
-                                    break;
-                                case 'b':
-                                    DateTime? parsedBegin = ParseDateTime(currentValue);
-                                    if (!parsedBegin.HasValue)
-                                    {
-                                        Console.WriteLine("ERROR: Cannot parse begin timestamp: " + currentValue);
-                                        return null;
-                                    }
-                                    configuration.Start = parsedBegin.Value;
-                                    break;
-                                case 'd':
-                                    // Hours to seconds
-                                    configuration.Duration = int.Parse(currentValue) * 60 * 60;
-                                    break;
-                                case 'r':
-                                    configuration.Rate = int.Parse(currentValue);
-                                    break;
-                                case 'g':
-                                    configuration.Range = int.Parse(currentValue);
-                                    break;
-                                default:
-                                    Console.WriteLine("ERROR: Unhandled setting: " + currentSetting);
-                                    return null;
-                            }
-                        }
-                        currentSetting = c;
-                        currentValue = "";
-                    }
-                }
-                return configuration;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("ERROR: Problem parsing configuration: " + e.Message);
-                return null;
-            }
-        }
-
 
 -->
