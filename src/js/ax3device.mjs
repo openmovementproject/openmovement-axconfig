@@ -121,6 +121,14 @@ export default class Ax3Device {
         this.serial = getSerialNumber(this.device.serialNumber);
         console.log('SERIAL: ' + this.serial);
 
+        this.deviceType = null;
+        if (this.device.serialNumber) {
+            const serial = this.device.serialNumber.trim();
+            if (serial.startsWith('CWA')) this.deviceType = 'AX3';
+            else if (serial.startsWith('AX')) this.deviceType = serial.substring(0, 3);
+        }
+        this.hasGyro = (this.deviceType === 'AX6');
+
         this.commandQueue = [];
         this.currentCommand = null;
         this.currentTimeout = null;
@@ -350,8 +358,9 @@ export default class Ax3Device {
         const response = result.lastLine();
         console.log('<<< ' + response);
         const parts = response.substring(response.indexOf('=') + 1).split(',');
+        this.hasGyro = (parts[0] === 'AX6');
         return {
-            deviceType: parts[0],
+            deviceType: parts[0] == 'CWA' ? 'AX3' : parts[0],
             deviceId: parseInt(parts[3], 10),
             firmwareVersion: parseInt(parts[2], 10),
         };
@@ -480,7 +489,7 @@ export default class Ax3Device {
         }
     }
 
-    async setRate(rate, range) {
+    async setRate(rate, range, gyro) {
         this.updateState('Setting rate');
         let value = 0x00;
 
@@ -498,6 +507,12 @@ export default class Ax3Device {
             case    6.25: case 6: value |= 0x06; break;
             default: throw('Invalid accelerometer frequency.');
         }
+        if (this.hasGyro && parseFloat(rate) > 1600) {
+            throw('This device has a maximum rate of 1600Hz')
+        }
+        if (this.hasGyro && parseFloat(rate) < 25) {
+            throw('This device has a minimum rate of 25Hz')
+        }
 				
         switch (parseInt(range))
         {
@@ -508,7 +523,24 @@ export default class Ax3Device {
             default: throw('Invalid accelerometer sensitivity.');
         }
 
-        const command = new Command(`\r\nRATE ${value}\r\n`, 'RATE=', 2000);
+        let gyroRange = null;
+        if (gyro) {
+            if (!this.hasGyro) {
+                throw('Cannot configure gyroscope on device without gyroscope.')
+            }
+            switch (parseInt(gyro))
+            {
+                case 2000:
+                case 1000:
+                case  500:
+                case  250:
+                    gyroRange = parseInt(gyro);
+                    break;
+                default: throw('Invalid gyro range: ' + parseInt(gyro));
+            }
+        }
+
+        const command = new Command(gyroRange ? `\r\nRATE ${value},${gyroRange}\r\n` : `\r\nRATE ${value}\r\n`, 'RATE=', 2000);
         console.log('>>> ' + command.output);
         const result = await this.exec(command);
         const response = result.lastLine();
@@ -519,6 +551,9 @@ export default class Ax3Device {
         }
         if (parts[1] != rate) {
             throw `RATE frequency unexpected: was ${parts[1]}, expected ${rate}`;
+        }
+        if (gyroRange && parts[2] != gyroRange) {
+            throw `RATE gyro range unexpected: was ${parts[2]}, expected ${gyroRange}`;
         }
     }
 
@@ -785,22 +820,31 @@ export default class Ax3Device {
             this.updateState('Configuring...');
             await this.tryAndRetry(() => this.open());
 
-            const config = Object.assign({
+            const defaultConfig = {
                 minBattery: null,
                 configLed: Ax3Device.LED_BLUE,
                 time: null,
-                sessionId: 0,
+                session: 0,
                 maxSamples: 0,
-                accelRate: 100,
-                accelRange: 8,
-                hibernate: -1,  // sleep forever
+                rate: 100,  // synchronous rate
+                range: 8,   // accel range
+                gyro: 0,    // gyro range
+                start: -1,  // sleep forever
                 stop: 0,        // stop always
                 metadata: '',
                 led: Ax3Device.LED_MAGENTA,
                 wipe: true,     // true=wipe first, false=rewrite filesystem, null=commit over
                 noData: false,
                 debug: false,
-            }, newConfig);
+            };
+
+            for (let key of Object.keys(newConfig)) {
+                if (!(key in defaultConfig)) {
+                    throw `ERROR: Unknown configuration value: ${key}`;
+                }
+            }
+
+            const config = Object.assign(defaultConfig, newConfig);
 
             console.log('ID=' + JSON.stringify(this.status.id));
             if (this.status.id.deviceId != this.serial) {
@@ -831,10 +875,10 @@ export default class Ax3Device {
             }
 
             await this.tryAndRetry(() => this.setTime(config.time));
-            await this.tryAndRetry(() => this.setSession(config.sessionId));
+            await this.tryAndRetry(() => this.setRate(config.rate, config.range, config.gyro));
+            await this.tryAndRetry(() => this.setSession(config.session));
             await this.tryAndRetry(() => this.setMaxSamples(config.maxSamples));
             await this.tryAndRetry(() => this.setDebug(config.debug ? 3 : 0));
-            await this.tryAndRetry(() => this.setRate(config.accelRate, config.accelRange));
             await this.tryAndRetry(() => this.setHibernate(config.start));
             await this.tryAndRetry(() => this.setStop(config.stop));
             await this.tryAndRetry(() => this.setMetadata(config.metadata));
@@ -855,9 +899,10 @@ export default class Ax3Device {
                 // Config
                 start: config.start,
                 stop: config.stop,
-                sessionId: config.sessionId,
-                accelRate: config.accelRate,
-                accelRange: config.accelRange,
+                session: config.session,
+                rate: config.rate,
+                range: config.range,
+                gyro: config.gyro,
                 metadata: config.metadata,
             };
         } catch (e) {

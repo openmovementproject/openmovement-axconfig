@@ -148,7 +148,7 @@ function parametersChanged(params = globalParams) {
     let readonly = false; // default
     if (typeof params.editable !== 'undefined') readonly = false;
     if (typeof params.readonly !== 'undefined') readonly = true;
-    for (let input of ['#session', '#rate', '#range', '#start', '#delay', '#duration', '#stop', '#metadata']) {
+    for (let input of ['#session', '#rate', '#range', '#gyro', '#start', '#delay', '#duration', '#stop', '#metadata']) {
         const elem = document.querySelector(input);
         if (readonly) {
             elem.setAttribute('disabled', 'true');
@@ -170,12 +170,13 @@ function parametersChanged(params = globalParams) {
         session: null,
         rate: 100,
         range: 8,
+        gyro: 0,
         start: 0,
         stop: 168,
         metadata: '',
     };
     let changedConfig = false;
-    for (let part of ['session', 'rate', 'range', 'start', 'stop', 'metadata']) {
+    for (let part of ['session', 'rate', 'range', 'gyro', 'start', 'stop', 'metadata']) {
         if (typeof params[part] !== 'undefined') { newConfig[part] = params[part]; }
         changedConfig |= (typeof newConfig[part] !== typeof lastConfig[part] || newConfig[part] == lastConfig[part]);
     }
@@ -213,6 +214,7 @@ const updateForm = (config) => {
     document.querySelector('#session').value = typeof config.session !== 'undefined' ? config.session : '';
     document.querySelector('#rate').value = typeof config.rate !== 'undefined' ? config.rate : '';
     document.querySelector('#range').value = typeof config.range !== 'undefined' ? config.range : '';
+    document.querySelector('#gyro').value = typeof config.gyro !== 'undefined' ? config.gyro : '';
 
     let start = parseDate(config.start);
     if (!start) {
@@ -261,6 +263,7 @@ const updateEnabled = () => {
 
 const updateStatus = () => {
     let status = {
+        deviceType: null,
         deviceId: '-',
         battery: '-',
         state: null,
@@ -270,6 +273,11 @@ const updateStatus = () => {
     currentDevice = deviceManager.getSingleDevice();
     if (currentDevice) {
         status.deviceId = currentDevice.serial || ((currentDevice.status && currentDevice.status.id && currentDevice.status.id.deviceId) ? currentDevice.status.id.deviceId : '-');
+        if (currentDevice.status && currentDevice.status.id && currentDevice.status.id.deviceType) {
+            status.deviceType = currentDevice.status.id.deviceType;
+        } else if (currentDevice.deviceType) {
+            status.deviceType = currentDevice.deviceType;
+        }
         if (currentDevice.status.battery !== null) {
             status.battery = currentDevice.status.battery.percent;
         }
@@ -281,7 +289,7 @@ const updateStatus = () => {
         document.querySelector('body').classList.remove('device-connected');
     }
 
-    document.querySelector('#device-id').value = status.deviceId;
+    document.querySelector('#device-id').value = status.deviceId + (status.deviceType ? ' [' + status.deviceType + ']' : '');
     document.querySelector('#battery-meter').value = Number.isNaN(parseInt(status.battery)) ? 0 : parseInt(status.battery);
     document.querySelector('#battery').value = Number.isNaN(parseInt(status.battery)) ? '-' : status.battery + "%";
     document.querySelector('#state').value = status.state || status.errorState || '-';
@@ -401,6 +409,7 @@ const configFromForm = () => {
         session: document.querySelector('#session').value == '' ? null : parseInt(document.querySelector('#session').value),
         rate: parseFloat(document.querySelector('#rate').value),
         range: parseInt(document.querySelector('#range').value),
+        gyro: parseInt(document.querySelector('#gyro').value),
         start: localTimeValue(document.querySelector('#start').value),
         stop: localTimeValue(document.querySelector('#stop').value),
         metadata: document.querySelector('#metadata').value,
@@ -481,29 +490,55 @@ const codeChanged = (code) => {
     updateEnabled();
 };
 
+const configMatch = (desired, actual) => {
+    let match = true;
+    for (let key of Object.keys(desired)) {
+        if (!key in actual) {
+            console.log(`ERROR: Configuration key not found: ${key}`);
+            match = false;
+        }
+        if (desired[key] != actual[key]) {
+            console.log(`ERROR: Configuration value not matched for '${key}': ${desired[key]} != ${actual[key]}.`);
+            match = false;
+        }
+    }
+    return match;
+}
+
+let isConfiguring = false;
 const submit = async () => {
-    const code = document.querySelector(codeInput).value;
-
+    //const code = document.querySelector(codeInput).value;
     // TODO: Turn code into config
-
+    if (isConfiguring) {
+        setResult('(device busy)', true);
+        return;
+    }
     try {
+        isConfiguring = true;
+        document.querySelector('input[type=submit]').setAttribute('disabled', 'true');
+        document.querySelector('input[type=submit]').style = 'display: none;';
         setResult('Configuring...', false);
         const config = configFromForm();
         console.log(JSON.stringify(config, null, 4));
         try {
             const status = await currentDevice.configure(config);
             console.log('CONFIG-STATUS: ' + JSON.stringify(status));
-            setResult('ℹ️ Configured', false);
 
-            document.querySelector('body').classList.add('completed');
-
-            // Post-config behaviour
-            if (afterClearCode) {
-                keyInput.setValue('');
-                document.querySelector('#code').value = '';
-                document.querySelector('#code').select();
-                document.querySelector('#code').focus();
+            if (configMatch(config, status)) {
+                setResult('ℹ️ Configured', false);
+                document.querySelector('body').classList.add('completed');
+    
+                // Post-config behaviour
+                if (afterClearCode) {
+                    keyInput.setValue('');
+                    document.querySelector('#code').value = '';
+                    document.querySelector('#code').select();
+                    document.querySelector('#code').focus();
+                }
+            } else {
+                setResult('ℹ️ Configured but mismatched', false);
             }
+
         } catch (e) {
             console.log('CONFIG-ERROR: ' + JSON.stringify(e));
             setResult(e, true);
@@ -512,7 +547,9 @@ const submit = async () => {
         console.log('CONFIGURATION: ' + e);
         setResult(e, true);
     }
-
+    isConfiguring = false;
+    document.querySelector('input[type=submit]').removeAttribute('disabled');
+    document.querySelector('input[type=submit]').style = '';
 };
 
 window.addEventListener('DOMContentLoaded', async (event) => {
@@ -577,7 +614,7 @@ window.addEventListener('DOMContentLoaded', async (event) => {
         //elem.addEventListener('propertychange', stopChanged);
     }
 
-    for (let input of ['#session', '#rate', '#range', '#delay', '#start', '#duration', '#stop', '#metadata']) {
+    for (let input of ['#session', '#rate', '#range', '#gyro', '#delay', '#start', '#duration', '#stop', '#metadata']) {
         const elem = document.querySelector(input);
         elem.addEventListener('change', updateEnabled);
         elem.addEventListener('input', updateEnabled);

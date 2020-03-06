@@ -1,6 +1,6 @@
 # AX Device Web Configuration Tool
 
-This is a web-based configuration tool for [AX Devices](https://github.com/digitalinteraction/openmovement/wiki/AX3) (currently AX3 or AX6 in accelerometer-only mode), and is part of the [Open Movement](https://openmovement.dev/) project.
+This is a web-based configuration tool for [AX Devices](https://github.com/digitalinteraction/openmovement/wiki/AX3), and is part of the [Open Movement](https://openmovement.dev/) project.
 
 To configure a device:
 
