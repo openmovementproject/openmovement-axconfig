@@ -40,9 +40,10 @@ Options can be added to the address by first appending a hash (`#`), then `key=v
 <!-- * `session=123456789` - session ID (9 digit numeric, use `config` instead which allows longer, alphanumeric IDs) -->
 * `rate=100` - sensor rate (Hz, default `100`, allowed `12.5|25|50|100|200|400|800|1600|3200`)
 * `range=8` - sensor range (*g*, default `8`, allowed `2|4|8|16`)
+* `gyro=0` - gyro rate (*dps*, default `0`=none, allowed `250|500|1000|2000`)
 * `start=0` - delay until start from current time (hours, default `0`); or exact start time (`YYYY-MM-DDThh:mm:ss`)
 * `stop=168` - duration of recording (hours, default 168); or exact stop time (`YYYY-MM-DDThh:mm:ss`)
-* `metadata=` - metadata to add to the recording (use URL-encoded format, `name)
+* `metadata=` - metadata to add to the recording (use URL-encoded format which will need double-escaping in a URL; subject code `_sc` will be added from the `config` value)
 
 ...an example URL with multiple options: `https://config.openmovement.dev/#readonly&nodetails&rate=100&range=8&start=0&stop=168`.  If you wanted to add a *Study Code*, something like this: `https://config.openmovement.dev/#readonly&nodetails&rate=100&range=8&start=0&stop=168&metadata=_s%3dMy_Study_Name`.  And if you also knew the recording identifier, it can be embedded into the link: `https://config.openmovement.dev/#readonly&nodetails&rate=100&range=8&start=0&stop=168&metadata=_s%3dMy_Study_Name&code=123abc456`.
 
