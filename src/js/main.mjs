@@ -34,7 +34,7 @@ Add the user to the `plugdev` group: `sudo adduser pi plugdev`
 // Windows Chrome WebUSB Back-end:  chrome://flags/#new-usb-backend
 */
 
-import { redirectConsole, watchParameters, localTimeString, localTimeValue } from './util.mjs';
+import { redirectConsole, watchParameters, localTimeString, localTimeValue, download } from './util.mjs';
 import KeyInput from './key_input.mjs';
 import DeviceManager from './device_manager.mjs';
 //import Barcode from './barcode.mjs';
@@ -207,6 +207,10 @@ function parametersChanged(params = globalParams) {
     if (!navigator.serial) {
         document.querySelector('#add_serial_device').setAttribute('style', 'display: none;');
     }
+
+    // Disable log/log-clear
+    document.querySelector('body').classList.toggle('nolog', typeof params.nolog !== 'undefined');
+    document.querySelector('body').classList.toggle('nologclear', typeof params.nologclear !== 'undefined');
 }
 
 
@@ -221,7 +225,7 @@ const updateForm = (config) => {
         document.querySelector('#delay').value = (!config.start && config.start !== 0) ? '' : parseFloat(config.start);
         delayChanged();
     } else {
-        document.querySelector('#start').value = localTimeString(start, true) || '';
+        document.querySelector('#start').value = localTimeString(start, 'm') || '';
         startChanged();
     }
 
@@ -229,7 +233,7 @@ const updateForm = (config) => {
     if (stop === null) {
         document.querySelector('#stop').value = document.querySelector('#start').value;
     } else {
-        document.querySelector('#stop').value = localTimeString(stop, true) || '';
+        document.querySelector('#stop').value = localTimeString(stop, 'm') || '';
     }
     stopChanged();
     //durationChanged(0);
@@ -365,7 +369,7 @@ const delayChanged = (delayValue = null) => {
         const now = new Date();
         const start = new Date(now.getTime() + parseFloat(delay) * 60 * 60 * 1000);
         const elem = document.querySelector('#start');
-        const newValue = localTimeString(start, true);
+        const newValue = localTimeString(start, 'm');
 //console.log("DELAY CHANGED?: " + parseFloat(delay) + " -> " + newValue);
         if (elem.value != newValue) {
             //console.log("UPDATE: Start updated to current time (delay " + parseFloat(delay) + " hrs): " + newValue)
@@ -398,7 +402,7 @@ const durationChanged = (duration) => {
     if (start) {
         const durationValue = getDuration();
         const stop = new Date(start.getTime() + durationValue);
-        document.querySelector('#stop').value = localTimeString(stop, true);
+        document.querySelector('#stop').value = localTimeString(stop, 'm');
     } else {
         document.querySelector('#stop').value = document.querySelector('#start').value;
     }
@@ -423,6 +427,21 @@ const configFromForm = () => {
         throw "Error: " + notSpecified.join(', ') + '.';
     }
     return config;
+}
+
+const extractMetadata = (metadata, id) => {
+    if (metadata.length > 0 && metadata[0] == '?') { metadata = metadata.slice(1); }
+    const parts = metadata.split('&');
+    for (let part of parts) {
+        const equals = part.indexOf('=');
+        const key = decodeURIComponent((equals >= 0) ? part.slice(0, equals) : part).replace(/\+/g, ' ');
+        if (key.length <= 0) continue;
+        if (key == id) {
+            const value = decodeURIComponent((equals >= 0) ? part.slice(equals + 1) : '').replace(/\+/g, ' ');
+            return value;
+        }
+    }
+    return null;
 }
 
 const upsertMetadata = (metadata, id, newValue) => {
@@ -505,10 +524,64 @@ const configMatch = (desired, actual) => {
     return match;
 }
 
+
+const logPrefix = 'LOG_';
+
+const logRecord = (resultLabel, status) => {
+    let elements = [];
+
+    // format: yyyy-MM-dd HH:mm:ss
+    // type: AX3-CONFIG-OK | AX3-CONFIG-ERROR
+    // timeNow,type,deviceId,sessionId,start,stop,frequency,range,"metadata"
+
+    // Current UTC time
+    //const now = new Date();
+    //const timestamp = now.getFullYear() + '-' + ('0' + (now.getMonth()+1)).slice(-2) + '-' + ('0' + now.getDate()).slice(-2) + ' ' + ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2) + ':' + ('0' + now.getSeconds()).slice(-2);
+    //elements.push(timestamp);
+
+    //console.log('STATUS', JSON.stringify(status, null, 4));    
+
+    elements.push(localTimeString(status.time, 'S'));
+    elements.push(resultLabel);
+    elements.push(status.deviceId);
+    elements.push(status.session);
+    elements.push(localTimeString(status.start, 'S'));
+    elements.push(localTimeString(status.stop, 'S'));
+    elements.push(status.rate);
+    elements.push(status.range);
+    elements.push('\"' + status.metadata.replace(/\"/g, '""') + '\"');  // "_sc=####"
+
+    // Additional
+    const code = extractMetadata(status.metadata, "_sc");
+    elements.push(status.gyro);
+    elements.push('\"' + code + '\"');      // alphanumeric subject code
+
+    // Append to the current day's log
+    const reportLine = elements.join(',');
+    const key = logPrefix + (new Date()).toISOString().slice(0, 10).replace(/[^0-9]/g, '');   // Today (UTC, numeric YYYYMMDD)
+
+    console.log("LOG: " + reportLine);
+    localStorage.setItem(key, (localStorage.getItem(key) || '') + reportLine + '\r\n');
+}
+
+const logFetch = () => {
+    const keys = Object.keys(localStorage).filter(key => key.startsWith(logPrefix)).sort();
+    const dayLogs = keys.map(key => localStorage.getItem(key));
+    const fullLog = dayLogs.join('');
+    return fullLog;
+}
+
+const logClear = () => {
+    //localStorage.clear();
+    const keys = Object.keys(localStorage).filter(key => key.startsWith(logPrefix));
+    for (let key of keys) {
+        localStorage.removeItem(key);
+    }
+}
+
 let isConfiguring = false;
 const submit = async () => {
     //const code = document.querySelector(codeInput).value;
-    // TODO: Turn code into config
     if (isConfiguring) {
         setResult('(device busy)', true);
         return;
@@ -524,10 +597,19 @@ const submit = async () => {
             const status = await currentDevice.configure(config);
             console.log('CONFIG-STATUS: ' + JSON.stringify(status));
 
+            let deviceType = '???';
+            if (currentDevice.status && currentDevice.status.id && currentDevice.status.id.deviceType) {
+                deviceType = currentDevice.status.id.deviceType;
+            } else if (currentDevice.deviceType) {
+                deviceType = currentDevice.deviceType;
+            }
+
             if (configMatch(config, status)) {
                 setResult('ℹ️ Configured', false);
                 document.querySelector('body').classList.add('completed');
-    
+
+                logRecord(deviceType + '-CONFIG-OK', status);
+                
                 // Post-config behaviour
                 if (afterClearCode) {
                     keyInput.setValue('');
@@ -537,10 +619,19 @@ const submit = async () => {
                 }
             } else {
                 setResult('ℹ️ Configured but mismatched', false);
+                logRecord(deviceType + '-CONFIG-FAILURE', config);
             }
 
         } catch (e) {
+            let deviceType = '???';
+            if (currentDevice.status && currentDevice.status.id && currentDevice.status.id.deviceType) {
+                deviceType = currentDevice.status.id.deviceType;
+            } else if (currentDevice.deviceType) {
+                deviceType = currentDevice.deviceType;
+            }
+            
             console.log('CONFIG-ERROR: ' + JSON.stringify(e));
+            logRecord(deviceType + '-CONFIG-ERROR', config);
             setResult(e, true);
         }
     } catch (e) {
@@ -629,6 +720,37 @@ window.addEventListener('DOMContentLoaded', async (event) => {
     if (!navigator.serial) {
         document.querySelector('#add_serial_device').setAttribute('disabled', 'true');
     }
+
+    document.querySelector('#log-download').addEventListener('click', (e) => {
+        e.preventDefault();
+        try {
+            const fullLog = logFetch();
+            const filename = 'log_' + (new Date()).toISOString().replace(/[^0-9]/g, '') + '.csv';
+            download(filename, fullLog, 'text/csv;charset=utf-8');    // 'text/plain;charset=utf-8', 'application/binary'
+        } catch (e) {
+            console.log(e);
+        }
+    });
+    document.querySelector('#log-clear').addEventListener('click', (e) => {
+        e.preventDefault();
+        let destroy = false;
+        if (true) {
+            const response = prompt("DESTROY data by deleting and clearing all of the configuration logs?  Type DESTROY in capitals to confirm.");
+            if (response != null) {
+                if (response === 'DESTROY') destroy = true;
+                else alert('Did not delete logs');
+            }
+        } else {
+            destroy = confirm("DESTROY data by deleting and clearing all of the configuration logs?");
+        }
+        if (destroy) {
+            try {
+                logClear();
+            } catch (e) {
+                console.log(e);
+            }
+        }
+    });
 
     // Call again now the DOM is loaded
     parametersChanged();

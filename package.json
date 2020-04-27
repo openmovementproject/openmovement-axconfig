@@ -13,7 +13,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "ssh://git@openlab.ncl.ac.uk:17150/dan.jackson/ax3webconfig.git"
+    "url": "ssh://git@github.com:digitalinteraction/openmovement-axconfig.git"
   },
   "keywords": [
     "AX3"

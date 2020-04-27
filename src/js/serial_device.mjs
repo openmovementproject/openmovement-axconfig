@@ -147,7 +147,12 @@ console.log('<<< [' + this.buffer.length + '] ' + value);
             throw e;
         } finally { 
             if (this.writer) {
-                this.writer.releaseLock();
+                try {
+                    this.writer.releaseLock();
+                } catch (e) {
+                    // TypeError: This writable stream writer has been released and cannot be used to monitor the stream's state
+                    console.log('WARNING: ' + e);
+                }
                 this.writer = null;
             }
         }

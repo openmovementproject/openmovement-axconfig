@@ -10,12 +10,15 @@ export function localTime(date) {
     return new Date(date.getTime() - tzOffset);
 }
 
-export function localTimeString(date, minutes) {
-    const local = localTime(date);    
+export function localTimeString(date, precision) {
+    const local = localTime(date);
     if (local === null) return null;
-    const localString = local.toISOString().slice(0, -1);
-    if (minutes) return localString.slice(0, -7);
-    return localString;
+    const localString = local.toISOString().slice(0, -1);   // remove zulu marker
+    if (precision == 'd') return localString.slice(0, -13); // days
+    if (precision == 'm') return localString.slice(0, -7);  // minutes
+    if (precision == 's') return localString.slice(0, -4);  // seconds
+    if (precision == 'S') return localString.slice(0, -4).replace('T', ' '); // Space-separated (seconds)
+    return localString;                                     // milliseconds
 }
 
 export function localTimeValue(str) {
@@ -86,3 +89,28 @@ export function redirectConsole(selector, newElement = 'P') {
         }
     }
 }
+
+
+// Synthesize a file download
+export function download(filename, data, mimeType) {
+    mimeType = mimeType || 'application/octet-binary'; // 'text/plain;charset=utf-8'
+    const anchorElement = document.createElement('A');
+    if (data instanceof ArrayBuffer || typeof data === 'string') {
+      data = [data];
+    }
+    if (Array.isArray(data)) {
+      data = new Blob(data, { type: mimeType });
+    }
+    let url;
+    if (data instanceof Blob) { 
+      url = URL.createObjectURL(data);
+    } else {  // (could also use this path for strings)
+      url = 'data:' + mimeType + ',' + encodeURIComponent(data);
+    }
+    anchorElement.setAttribute('href', url);
+    anchorElement.setAttribute('download', filename);
+    anchorElement.style.display = 'none';
+    document.body.appendChild(anchorElement);
+    anchorElement.click();
+    document.body.removeChild(anchorElement);
+  }

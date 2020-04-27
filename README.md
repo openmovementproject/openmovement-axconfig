@@ -53,6 +53,14 @@ Options can be added to the address by first appending a hash (`#`), then `key=v
 The web application is cached so that it works offline.  In Chrome-based browsers, see `chrome://serviceworker-internals` (or `chrome://appcache-internals/` for earlier versions of this application).  The application is also a *Progressive Web App* and can be installed to the user's desktop/home screen/launcher.
 
 
+## Configuration Logs
+
+Logs are stored locally in the browser.  The following options affect the logs: `nolog`, remove log buttons; `nologclear`, remove *Clear Log* button.  When *Download Log* is clicked, the downloaded log file is in *.CSV* format. Times are local and in the format `YYYY-MM-DD hh:mm:ss`. The *type* reports success/failure and is `AX3-CONFIG-OK`/`AX3-CONFIG-FAILURE` (final configuration check did not match)/`AX3-CONFIG-ERROR` (or `AX6-` prefixed). The line format is:
+
+```
+time,type,deviceId,sessionId,start,stop,frequency,range,"metadata",gyroRange,"subjectCode"
+```
+
 <!--
 
 If you are using Linux you may need to add a `udev` entry to prevent the device from being claimed by another driver.  
@@ -93,3 +101,5 @@ ATTR{idVendor}=="04d8", ATTR{idProduct}=="0057", ENV{ID_MM_TTY_MANUAL_SCAN_ONLY}
 ...then reload and reprocess the device rules: `sudo udevadm control --reload-rules && udevadm trigger`.
 
 -->
+
+<!-- dev works with node 12.13.1, if problems, delete '.cache' directory -->

@@ -6,7 +6,7 @@ rem http-server -S -K key.pem -C server.crt
 :::npm run build
 
 ::: Kill existing processes
-taskkill /im "ngrok.exe" >nul
+taskkill /im "ngrok.exe" 2>nul
 taskkill /im cmd.exe /fi "WINDOWTITLE eq http-server*"
 
 ::: HTTP server on port 8080

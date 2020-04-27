@@ -3,7 +3,7 @@ rem openssl req -newkey rsa:2048 -new -nodes -keyout key.pem -out csr.pem && ope
 rem http-server -S -K key.pem -C server.crt
 
 ::: Kill existing processes
-taskkill /im "ngrok.exe" >nul
+taskkill /im "ngrok.exe" 2>nul
 taskkill /im cmd.exe /fi "WINDOWTITLE eq http-server*"
 
 ::: Live server on port 8080 (rather than parcel's dev mode on port 1234) as this WebSocket works through ngrok's https

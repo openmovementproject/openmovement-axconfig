@@ -207,3 +207,6 @@ footer a:hover, footer a:active {
 #duration_days, #duration_hours, #duration_minutes, #duration_seconds {
 	text-align: right;
 }
+
+body.nolog .log-span { display: none; }
+body.nologclear .log-clear-span { display: none; }

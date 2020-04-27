@@ -172,11 +172,13 @@ export default class DeviceManager {
             throw 'ERROR: Web Serial API is not supported in this browser configuration.';
         }
         try {
-            const port = await navigator.serial.requestPort({
-                filters: [
-                    { vendorId: Ax3Device.USB_DEVICE_VID, productId: Ax3Device.USB_DEVICE_PID },
-                ]
-            });
+            const requestOptions = {
+                filters: [{ 
+                    usbVendorId: Ax3Device.USB_DEVICE_VID, usbProductId: Ax3Device.USB_DEVICE_PID,  // newer syntax, see: https://github.com/WICG/serial/blob/gh-pages/EXPLAINER.md#potential-api
+                       vendorId: Ax3Device.USB_DEVICE_VID,    productId: Ax3Device.USB_DEVICE_PID,  // older syntax (TODO: Delete)
+                }]
+            };
+            const port = await navigator.serial.requestPort(requestOptions);
             console.log('DEVICEMANAGER: Request serial ' + port);
             if (!(port in this.serialDevices)) {
                 const axDevice = new Ax3Device(new SerialDevice(port));
