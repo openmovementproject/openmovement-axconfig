@@ -37,10 +37,10 @@ Options can be added to the address by first appending a hash (`#`), then `key=v
 * `readonly` - do not allow editing of the detailed settings.
 * `nodetails` - hide detailed settings by default.
 * `config=123456789` - recording identifier (set as the *subject code* in the metadata; the last 9 digits will also be used as the device's numeric session ID)
-<!-- * `session=123456789` - session ID (9 digit numeric, use `config` instead which allows longer, alphanumeric IDs) -->
+<!-- * `session=123456789` - session ID (9 digit numeric; use `config` instead which allows longer alphanumeric IDs stored in the *subject code*) -->
 * `rate=100` - sensor rate (Hz, default `100`, allowed `12.5|25|50|100|200|400|800|1600|3200`)
 * `range=8` - sensor range (*g*, default `8`, allowed `2|4|8|16`)
-* `gyro=0` - gyro rate (*dps*, default `0`=none, allowed `250|500|1000|2000`)
+* `gyro=0` - gyro sensitivity (*dps*, default `0`=none, allowed `250|500|1000|2000`)
 * `start=0` - delay until start from current time (hours, default `0`); or exact start time (`YYYY-MM-DDThh:mm:ss`)
 * `stop=168` - duration of recording (hours, default 168); or exact stop time (`YYYY-MM-DDThh:mm:ss`)
 * `metadata=` - metadata to add to the recording (use URL-encoded format which will need double-escaping in a URL; subject code `_sc` will be added from the `config` value)
