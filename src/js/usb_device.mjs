@@ -78,6 +78,13 @@ function genericFromConfiguration(configuration) {
     let interfaceData = null;
     for (let inter of configuration.interfaces) {
         if (inter.alternates[0].interfaceClass == 0xff) {
+// TODO: ??? Also match on interfaceSubclass / interfaceProtocol / interfaceName ???
+console.log(JSON.stringify({
+    interfaceClass: inter.alternates[0].interfaceClass,
+    interfaceSubclass: inter.alternates[0].interfaceSubclass,
+    interfaceProtocol: inter.alternates[0].interfaceProtocol,
+    interfaceName: inter.alternates[0].interfaceName,
+}));
             interfaceData = inter.interfaceNumber;
         }
     }
