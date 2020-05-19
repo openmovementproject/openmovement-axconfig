@@ -6,7 +6,7 @@ To configure a device:
 
 1. Visit the address: [`config.openmovement.dev`](https://config.openmovement.dev/)
 
-2. Connect the device.  You may only configure one device at a time.  If on a mobile phone or tablet, you may need a special adapter or cable from your mobile USB Micro-B female, or USB C female port, to the device's USB Micro-B female port. 
+2. Connect the device.  You may only configure one device at a time.  If on a mobile phone or tablet, you may need a special adapter or cable from your mobile device's connector (USB Micro-B female, or USB C female port), to the AX device's USB Micro-B female port. 
 
 3. Choose *Connect USB device...* on Android/Mac, or *Connect Serial device...* on Windows (if this option does not appear, see below for how to enable it).
 
@@ -24,16 +24,14 @@ To configure a device:
 
 The AX devices are a *Composite USB Device* made up of a *USB Mass Storage Device Class* (to serve the data file, like a standard USB drive), and a *USB Communications Device Class (CDC)* (a serial device).  To configure the devices the tool must communicate with the CDC device from the web page. 
 
-On some platforms (e.g. Mac and on some Android devices), the CDC connection is available as a standard USB interface and communication is possible on supported browsers via *WebUSB*.  Additional debugging may be available in your browser at: `chrome://device-log` and `chrome://usb-internals`. 
+On some platforms (e.g. Mac and on some Android devices), the CDC connection is available as a standard USB interface and communication is possible on supported browsers via *WebUSB*.  (Additional debugging for this may be available in your browser at: `chrome://device-log` and `chrome://usb-internals`.)
 
-However, on other platforms, the CDC device is taken by a standard serial driver (e.g. for example, some Android devices as `/dev/ttyACM*`, on Windows as `\\.\COM*`).  There is a second communication approach that supports serial connections, the *Web Serial API*, and this should work on some supported browsers (e.g. Chrome on Windows), but may require enabling at `chrome://flags#enable-experimental-web-platform-features`. 
+However, on other platforms, the CDC device is taken by a standard serial driver (e.g. some Android devices as `/dev/ttyACM*`, or Windows as `\\.\COM*`).  There is a second communication approach that supports serial connections, the *Web Serial API*, and this should work on supported browsers (e.g. Chrome on Windows, but may require enabling at `chrome://flags#enable-experimental-web-platform-features`).
 
 Unfortunately, Android is not a supported platform for the *Web Serial API* and, worse, access to serial devices (`/dev/ttyACM*`) appears to be completely forbidden to all applications on some devices (via a Security-Enhanced Linux configuration). 
-To get around this limitation, there is an [experimental AX3 device firmware V50 with WinUSB and Generic interface support](https://raw.githubusercontent.com/digitalinteraction/openmovement/master/Downloads/AX3/AX3-Firmware-50-winusb-generic.zip] -- this firmware supports an additional "generic" interface for device communication (which does not appear to be a serial CDC device) and, in addition, supports the WinUSB descriptors which allows the interface to be visible to user applications.
+To get around this limitation, there is an [experimental AX3 device firmware V50 with WinUSB and Generic interface support](https://raw.githubusercontent.com/digitalinteraction/openmovement/master/Downloads/AX3/AX3-Firmware-50-winusb-generic.zip] -- this firmware supports an additional "generic" interface for device communication (which does not appear to be a serial CDC device) and, in addition, supports the WinUSB descriptors which allows the interface to be visible to user applications on Windows (please note that this firmware is experimental).
 
-<!--
-An additional method is to use a local native binary for device communication, either through a WebExtension using Native Messaging, and/or by running a local server over HTTP(S)/WebSocket.
--->
+Although not currently used by the configuration tool, an additional approach is to use a local native binary for device communication and for the web page to talk to this service either through a WebExtension using Native Messaging, and/or by running a local server over HTTP(S)/WebSocket (although this approach has difficulties with localhost communication not being certified).
 
 
 ## URL-based options
