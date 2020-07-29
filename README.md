@@ -36,19 +36,20 @@ Although not currently used by the configuration tool, an additional approach is
 
 ## URL-based options
 
-Options can be added to the address by first appending a hash (`#`), then `key=value` pairs separated with an ampersand (`&`):
+Options can be added to the address by appending a hash (`#`) then `key=value` pairs separated with an ampersand (`&`).  In special circumstances, you can place options after a question mark (`?`), but changing these must be done online as this will cause the page to be reloaded -- an advantage of this is that this URL can be stored to a home screen shortcut while keeping the custom options.  The options are:
 
-* `debug` - show debug console information.
-* `readonly` - do not allow editing of the detailed settings.
+* `focus` - immediately focus the *Code* input box for entry.
 * `nodetails` - hide detailed settings by default.
-* `config=123456789` - recording identifier (set as the *subject code* in the metadata; the last 9 digits will also be used as the device's numeric session ID)
+* `readonly` - do not allow editing of the detailed settings.
 <!-- * `session=123456789` - session ID (9 digit numeric; use `config` instead which allows longer alphanumeric IDs stored in the *subject code*) -->
+* `config=123456789` - recording identifier (set as the *subject code* in the metadata; the last 9 digits will also be used as the device's numeric session ID)
 * `rate=100` - sensor rate (Hz, default `100`, allowed `12.5|25|50|100|200|400|800|1600|3200`)
 * `range=8` - sensor range (*g*, default `8`, allowed `2|4|8|16`)
 * `gyro=0` - gyro sensitivity (*dps*, default `0`=none, allowed `250|500|1000|2000`)
-* `start=0` - delay until start from current time (hours, default `0`); or exact start time (`YYYY-MM-DDThh:mm:ss`)
-* `stop=168` - duration of recording (hours, default 168); or exact stop time (`YYYY-MM-DDThh:mm:ss`)
+* `start=0` - delay until start from current time (hours, default `0`); or an exact start time (`YYYY-MM-DDThh:mm:ss`)
+* `stop=168` - duration of recording (hours, default 168); or an exact stop time (`YYYY-MM-DDThh:mm:ss`)
 * `metadata=` - metadata to add to the recording (use URL-encoded format which will need double-escaping in a URL; subject code `_sc` will be added from the `config` value)
+* `debug` - show debug console information.
 
 ...an example URL with multiple options: `https://config.openmovement.dev/#readonly&nodetails&rate=100&range=8&start=0&stop=168`.  If you wanted to add a *Study Code*, something like this: `https://config.openmovement.dev/#readonly&nodetails&rate=100&range=8&start=0&stop=168&metadata=_s%3dMy_Study_Name`.  And if you also knew the recording identifier, it can be embedded into the link: `https://config.openmovement.dev/#readonly&nodetails&rate=100&range=8&start=0&stop=168&metadata=_s%3dMy_Study_Name&code=123abc456`.
 
