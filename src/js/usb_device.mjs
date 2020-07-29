@@ -210,7 +210,10 @@ export default class UsbDevice {
 
 
     async write(message) {
-        console.log('SEND: ' + message.replace(/[\r\n]/g, '|'));
+if (true) {
+    message = '\r' + message.trim().padEnd(62) + '\r';
+}
+        console.log('SEND: ' + message.replace(/\r/g, '\\r').replace(/\n/g, '\\n'));
         let outBuffer = encoder.encode(message);
         console.log('===: ' + outBuffer);
         try {
@@ -238,16 +241,16 @@ export default class UsbDevice {
             if (result.status === 'ok') {
                 if (result.data && result.data.byteLength > 0) {
                     // Clean the data to be printable ASCII only
-                    let replacements = 0;
+                    let replacements = [];
                     for (let i = 0; i < result.data.byteLength; i++) {
-                        let v = result.data.getUint8();
-                        if (v >= 128 || (v < 32 && v != '\r' && v != '\n')) {
-                            buffer.setUint8(32);
-                            replacements++;
+                        let v = result.data.getUint8(i);
+                        if (v >= 128 || (v < 32 && v != 13 && v != 10)) {
+                            result.data.setUint8(i, 32);
+                            replacements.push(v);
                         } 
                     }
-                    if (replacements > 0) {
-                        console.log(`NOTE: Replaced ${replacements} of ${result.data.byteLength} bytes.`);
+                    if (replacements.length > 0) {
+                        console.log(`NOTE: Replaced ${replacements.length} of ${result.data.byteLength} bytes: ${JSON.stringify(replacements)}`);
                     }
                     reply = decoder.decode(result.data);   
                 } else {
@@ -260,7 +263,7 @@ export default class UsbDevice {
             console.log('WARNING: Problem reading data: ' + this.io.data.endpointRead + ' -- ' + e);
             return null;
         }
-        console.log('RECV: ' + (reply === null ? '<null>' : reply.replace(/[\r\n]/g, '|')));
+        console.log('RECV: ' + (reply === null ? '<null>' : reply.replace(/\r/g, '\\r').replace(/\n/g, '\\n')));
 
         return reply;
     }

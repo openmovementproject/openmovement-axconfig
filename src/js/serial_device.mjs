@@ -135,7 +135,7 @@ console.log('<<< [' + this.buffer.length + '] ' + value);
     }
 
     async write(message) {
-        console.log('SEND: ' + message.replace(/[\r\n]/g, '|'));
+        console.log('SEND: ' + message.replace(/\r/g, '\\r').replace(/\n/g, '\\n'));
         try {
             if (this.writer) {
                 console.log('UNEXPECTED: Writer already exists');
@@ -171,7 +171,7 @@ console.log('<<< [' + this.buffer.length + '] ' + value);
             console.log('WARNING: Problem reading serial data: ' + e);
             return null;
         }
-        console.log('RECV: ' + (reply === null ? '<null>' : reply.replace(/[\r\n]/g, '|')));
+        console.log('RECV: ' + (reply === null ? '<null>' : reply.replace(/\r/g, '\\r').replace(/\n/g, '\\n')));
         return reply;
     }
 

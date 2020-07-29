@@ -132,6 +132,7 @@ export default class Ax3Device {
         this.commandQueue = [];
         this.currentCommand = null;
         this.currentTimeout = null;
+        this.rejectRead = null;
         this.nextTick = null;
         this.receiveBuffer = '';
         this.statusHandler = null;
@@ -165,7 +166,7 @@ export default class Ax3Device {
     }
 
     async exec(command) {
-        console.log('exec()');
+        console.log(`exec() command=${command.output.replace(/[\r\n]/g, '|')} commandQueue.length=${this.commandQueue.length} currentCommand=${this.currentCommand} nextTick=${this.nextTick}`);
         const commandState = new CommandState(command);
         this.commandQueue.push(commandState);
         // Bootstrap required?
@@ -182,72 +183,78 @@ export default class Ax3Device {
     }
 
     async execNext() {
-        console.log('execNext()');
-        // Write...
-        if (this.currentCommand == null) {
-            console.log('execNext(): no command...');
-            if (this.commandQueue.length <= 0) {
-                console.log('execNext(): no more commands');
-                this.nextTick = null;
-                return;
-            }
-            console.log('execNext(): getting next command...');
-            this.currentCommand = this.commandQueue.shift();
-            if (this.currentCommand.command.timeout) {
-                console.log('execNext(): setting up new timeout: ' + this.currentCommand.command.timeout);
-                this.currentTimeout = setTimeout(this.timeout.bind(this), this.currentCommand.command.timeout);
-            } else {
-                console.log('execNext(): command has no timeout');
-            }
-            try {
-                console.log('execNext(): write: ' + this.currentCommand.command.output.replace(/[\r\n]/g, '|'));
-                await this.write(this.currentCommand.command.output);
-                console.log('execNext(): write: (done)');
-            } catch (e) {
-                console.log('execNext(): write: exception: ' + e);
-                this.commandComplete(e);
-            }
-        }
-        // Read/timeout
-        if (this.currentCommand) {
-            let data = null;
-            try {
-                if (this.currentCommand && this.currentCommand.checkTimeout()) {
-                    console.log('execNext(): timeout');
-                    this.commandComplete('Timeout before read');
+        try {
+            this.nextTick = true;  // signify pending
+            console.log('execNext()');
+            // Write...
+            if (this.currentCommand == null) {
+                console.log('execNext(): no command...');
+                if (this.commandQueue.length <= 0) {
+                    console.log('execNext(): no more commands');
+                    this.nextTick = null;
+                    return;
                 }
-                console.log('execNext(): read');
-                data = await this.read();
-            } catch (e) {
-                console.log('execNext(): read exception: ' + e);
-                this.commandComplete(e);
-            }
-            if (data === null && this.device.type === 'serial') {
-                if (data === null) {
-                    // Seems to be some glitch in not delivering buffered content, new bytes incoming seem to help...
-                    await this.write('\r\n');
-                    // Rather than tight poll on serial (where actual read is async)
-                    await sleep(100);
+                console.log('execNext(): getting next command...');
+                this.currentCommand = this.commandQueue.shift();
+                if (this.currentCommand.command.timeout) {
+                    console.log('execNext(): setting up new timeout: ' + this.currentCommand.command.timeout);
+                    this.currentTimeout = setTimeout(this.timeout.bind(this), this.currentCommand.command.timeout);
+                } else {
+                    console.log('execNext(): command has no timeout');
+                }
+                try {
+                    console.log('execNext(): write: ' + this.currentCommand.command.output.replace(/[\r\n]/g, '|'));
+                    await this.write(this.currentCommand.command.output);
+                    console.log('execNext(): write: (done)');
+                } catch (e) {
+                    console.log('execNext(): write: exception: ' + e);
+                    this.commandComplete(e);
                 }
             }
-            if (this.currentCommand && data !== null) {
-                console.log('execNext(): adding data ' + data.length);
-                this.receiveBuffer += data;
-                for (;;) {
-                    const eol = this.receiveBuffer.indexOf('\n');
-                    if (eol < 0) break;
-                    const line = this.receiveBuffer.slice(0, eol).trim();
-                    console.log('LINE: ' + line);
-                    this.receiveBuffer = this.receiveBuffer.slice(eol + 1);
-                    if (this.currentCommand.addResponse(line)) {
-                        console.log('execNext(): end');
-                        this.commandComplete();
-                        break;
+            // Read/timeout
+            if (this.currentCommand) {
+                let data = null;
+                try {
+                    if (this.currentCommand && this.currentCommand.checkTimeout()) {
+                        console.log('execNext(): timeout before read');
+                        this.commandComplete('Timeout before read');
+                    } else {
+                        console.log('execNext(): read');
+                        data = await this.read();
+                    }
+                } catch (e) {
+                    console.log('execNext(): read exception: ' + e);
+                    this.commandComplete(e);
+                }
+                if (data === null && this.device.type === 'serial') {
+                    if (data === null) {
+                        // Seems to be some glitch in not delivering buffered content, new bytes incoming seem to help...
+                        await this.write('\r\n');
+                        // Rather than tight poll on serial (where actual read is async)
+                        await sleep(100);
                     }
                 }
-            } else {
-                console.log('execNext(): (no command or no data) ');
+                if (this.currentCommand && data !== null) {
+                    console.log('execNext(): adding data ' + data.length);
+                    this.receiveBuffer += data;
+                    for (;;) {
+                        const eol = this.receiveBuffer.indexOf('\n');
+                        if (eol < 0) break;
+                        const line = this.receiveBuffer.slice(0, eol).trim();
+                        console.log('LINE: ' + line);
+                        this.receiveBuffer = this.receiveBuffer.slice(eol + 1);
+                        if (this.currentCommand.addResponse(line)) {
+                            console.log('execNext(): end');
+                            this.commandComplete();
+                            break;
+                        }
+                    }
+                } else {
+                    console.log('execNext(): (no command or no data) ');
+                }
             }
+        } catch (e) {
+            console.log('execNext(): Exception during processing: ' + e)
         }
         // Invoke again shortly
         this.nextTick = setTimeout(async () => {
@@ -262,8 +269,12 @@ export default class Ax3Device {
         try {
             console.log('timeout(): ...');
             this.currentTimeout = null;
+            if (this.rejectRead) {
+                console.log('timeout(): ...reject read...');
+                this.rejectRead(null);
+            }
             if (this.currentCommand) {
-                console.log('timeout(): ...cancel...');
+                console.log('timeout(): ...cancel read...');
                 await this.device.cancelRead();
                 this.commandComplete('Timeout');
             } else {
@@ -286,9 +297,10 @@ export default class Ax3Device {
             this.currentTimeout = null;
         }
         if (this.currentCommand) {
-            this.currentCommand.complete(e);
+            const curCmd = this.currentCommand;
+            this.currentCommand = null;
+            curCmd.complete(e);
         }
-        this.currentCommand = null;
     }
     
 
@@ -310,7 +322,13 @@ export default class Ax3Device {
 
 
     async read() {
-        return await this.device.read();
+        const timeoutPromise = new Promise((resolve, reject) => {
+            this.rejectRead = reject;
+        });
+        return Promise.race([
+            timeoutPromise,
+            this.device.read()
+        ]);
     }
 
    
