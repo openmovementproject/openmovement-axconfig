@@ -43,7 +43,11 @@ FOR /F "tokens=* USEBACKQ" %%F IN (`curl -s http://127.0.0.1:4040/api/tunnels ^|
   SET TUNNEL=%%F
 )
 IF "%TUNNEL%"=="" GOTO wait_for_ngrok
-ECHO TUNNEL= %TUNNEL%
+ECHO Now listening on: %TUNNEL%
+SET QRCODE=
+FOR %%X IN (qrcode.exe) do set QRCODE=%%~$PATH:X
+IF DEFINED QRCODE "%QRCODE%" --invert --output:medium "%TUNNEL%"
+ECHO.%TUNNEL%
 rem adb shell am start -n com.android.chrome/org.chromium.chrome.browser.ChromeTabbedActivity -d "%TUNNEL%" --activity-clear-task
 rem (open local Chrome and use "Send to your devices" to open on phone).
 IF NOT "%TUNNEL%"=="" start chrome.exe "%TUNNEL%#debug&nodetails&config=0"
