@@ -135,7 +135,9 @@ console.log('<<< [' + this.buffer.length + '] ' + value);
     }
 
     async write(message) {
-        console.log('SEND: ' + message.replace(/\r/g, '\\r').replace(/\n/g, '\\n'));
+// HACK: This padding
+if (true && message.trim().length > 0) { message = ('\r' + message.trim() + '\r').padEnd(64, '\r'); }
+        console.log('SEND: ' + message.replace(/\r/g, '\\r').replace(/\n/g, '\\n').replace(/ /g, '☐'));
         try {
             if (this.writer) {
                 console.log('UNEXPECTED: Writer already exists');
@@ -171,7 +173,7 @@ console.log('<<< [' + this.buffer.length + '] ' + value);
             console.log('WARNING: Problem reading serial data: ' + e);
             return null;
         }
-        console.log('RECV: ' + (reply === null ? '<null>' : reply.replace(/\r/g, '\\r').replace(/\n/g, '\\n')));
+        console.log('RECV: ' + (reply === null ? '<null>' : reply.replace(/\r/g, '\\r').replace(/\n/g, '\\n').replace(/ /g, '☐')));
         return reply;
     }
 

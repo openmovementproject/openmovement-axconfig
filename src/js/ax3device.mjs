@@ -229,7 +229,7 @@ export default class Ax3Device {
                 if (data === null && this.device.type === 'serial') {
                     if (data === null) {
                         // Seems to be some glitch in not delivering buffered content, new bytes incoming seem to help...
-                        await this.write('\r\n');
+                        await this.write('\r');
                         // Rather than tight poll on serial (where actual read is async)
                         await sleep(100);
                     }

@@ -210,10 +210,9 @@ export default class UsbDevice {
 
 
     async write(message) {
-if (true) {
-    message = '\r' + message.trim().padEnd(62) + '\r';
-}
-        console.log('SEND: ' + message.replace(/\r/g, '\\r').replace(/\n/g, '\\n'));
+// HACK: This padding
+if (true && message.trim().length > 0) { message = ('\r' + message.trim() + '\r').padEnd(64, '\r'); }
+        console.log('SEND: ' + message.replace(/\r/g, '\\r').replace(/\n/g, '\\n').replace(/ /g, '☐'));
         let outBuffer = encoder.encode(message);
         console.log('===: ' + outBuffer);
         try {
@@ -263,7 +262,7 @@ if (true) {
             console.log('WARNING: Problem reading data: ' + this.io.data.endpointRead + ' -- ' + e);
             return null;
         }
-        console.log('RECV: ' + (reply === null ? '<null>' : reply.replace(/\r/g, '\\r').replace(/\n/g, '\\n')));
+        console.log('RECV: ' + (reply === null ? '<null>' : reply.replace(/\r/g, '\\r').replace(/\n/g, '\\n').replace(/ /g, '☐')));
 
         return reply;
     }
