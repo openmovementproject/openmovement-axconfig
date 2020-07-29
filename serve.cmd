@@ -14,7 +14,7 @@ rem taskkill /im "ngrok.exe" 2>nul
 for /f "delims=, tokens=3" %%f in ('wmic path win32_process get %FIELDS% /format:csv ^| findstr /v findstr.exe ^| findstr ngrok.exe') do (
   if not "%%f"=="name" (
     echo PID/ngrok: %%f
-	TASKKILL /PID %%f
+	TASKKILL /PID %%f /F
   )
 )
 
@@ -26,11 +26,15 @@ for /f "delims=, tokens=3" %%f in ('wmic path win32_process get %FIELDS% /format
   )
 )
 
+taskkill /im WindowsTerminal.exe /fi "WINDOWTITLE eq http-server*" >nul
+
 ::: HTTP server on port 8080
-start "http-server" cmd /c http-server docs
+rem start "http-server" cmd /c http-server docs
 
 ::: Ngrok to make public
-start "ngrok" ngrok http 8080
+rem start "ngrok" ngrok http 8080
+
+start "http-server-ngrok" wt new-tab --title "http-server-ngrok" -d . cmd /c "title http-server-ngrok && http-server docs" ; split-pane --title "http-server-ngrok" ngrok http 8080
 
 ::: Wait for Ngrok to start
 :wait_for_ngrok

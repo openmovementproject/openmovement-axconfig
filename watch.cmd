@@ -23,11 +23,15 @@ for /f "delims=, tokens=3" %%f in ('wmic path win32_process get %FIELDS% /format
   )
 )
 
+taskkill /im WindowsTerminal.exe /fi "WINDOWTITLE eq http-server*" >nul
+
 ::: Live server on port 8080 (rather than parcel's dev mode on port 1234) as this WebSocket works through ngrok's https
-start "http-server" cmd /c live-server --no-browser dist
+rem start "http-server" cmd /c live-server --no-browser dist
 
 ::: Ngrok to make public
-start "ngrok" ngrok http 8080
+rem start "ngrok" ngrok http 8080
+
+start "http-server-ngrok" wt new-tab --title "http-server-ngrok" -d . cmd /c "title http-server-ngrok && live-server --no-browser dist" ; split-pane --title "http-server-ngrok" ngrok http 8080
 
 ::: Wait for Ngrok to start
 :wait_for_ngrok
