@@ -413,7 +413,7 @@ export default class Ax3Device {
     }
 
     async setTime(newTime = null) {
-        this.updateState('Setting time');
+        this.updateState('Configuring: Setting time');
         let time = newTime;
         if (time === null) {
             time = new Date();
@@ -433,7 +433,7 @@ export default class Ax3Device {
 
     async setSession(inSessionId) {
         const sessionId = parseInt(inSessionId)
-        this.updateState('Setting session ID');
+        this.updateState('Configuring: Setting session ID');
         if (typeof sessionId !== 'number' || isNaN(sessionId) || sessionId < 0 || sessionId > 2147483647) throw "Session ID invalid value";
         const command = new Command(`\r\nSESSION ${sessionId}\r\n`, 'SESSION=', 2000);
         console.log('>>> ' + command.output);
@@ -447,7 +447,7 @@ export default class Ax3Device {
     }
 
     async setMaxSamples(maxSamples) {
-        this.updateState('Setting max samples');
+        this.updateState('Configuring: Setting max. samples');
         const command = new Command(`\r\nMAXSAMPLES ${maxSamples}\r\n`, 'MAXSAMPLES=', 2000);
         console.log('>>> ' + command.output);
         const result = await this.exec(command);
@@ -470,7 +470,7 @@ export default class Ax3Device {
     }
 
     async setHibernate(time) {
-        this.updateState('Setting start');
+        this.updateState('Configuring: Setting start');
         const timestamp = this.packDateTime(time);
         const command = new Command(`\r\nHIBERNATE ${timestamp}\r\n`, 'HIBERNATE=', 2000);
         console.log('>>> ' + command.output);
@@ -494,7 +494,7 @@ export default class Ax3Device {
     }
 
     async setStop(time) {
-        this.updateState('Setting stop');
+        this.updateState('Configuring: Setting stop');
         const timestamp = this.packDateTime(time);
         const command = new Command(`\r\nSTOP ${timestamp}\r\n`, 'STOP=', 2000);
         console.log('>>> ' + command.output);
@@ -508,7 +508,7 @@ export default class Ax3Device {
     }
 
     async setRate(rate, range, gyro) {
-        this.updateState('Setting rate');
+        this.updateState('Configuring: Setting rate');
         let value = 0x00;
 
         switch (parseFloat(rate))
@@ -577,7 +577,7 @@ export default class Ax3Device {
 
     async setDebug(debugCode) {
         let debugValue = (debugCode === true) ? 3 : +debugCode;     // true = debug code 3; false = debug code 0
-        this.updateState('Setting debug status');
+        this.updateState('Configuring: Setting flash status');
         const command = new Command(`\r\DEBUG ${debugValue}\r\n`, 'DEBUG=', 2000);
         console.log('>>> ' + command.output);
         const result = await this.exec(command);
@@ -679,7 +679,7 @@ export default class Ax3Device {
         const count = 14;
         for (let i = 0; i < count; i++)
         {
-            this.updateState(`Setting metadata (${i + 1} / ${count})`);
+            this.updateState(`Configuring: Setting metadata (${i + 1} / ${count})`);
             let strip = '';
             const start = i * stride;
             let end = (i + 1) * stride;
@@ -709,13 +709,13 @@ export default class Ax3Device {
     async commit(wipe) {
         let command;
         if (wipe === true) {
-            this.updateState('Wipe and commit');
+            this.updateState('Configuring: Wiping and committing');
             command = new Command(`\r\nFORMAT WC\r\n`, 'COMMIT', 10000);
         } else if (wipe === false) {
-            this.updateState('Erase and commit');
+            this.updateState('Configuring: Erasing and committing');
             command = new Command(`\r\nFORMAT QC\r\n`, 'COMMIT', 8000);
         } else if (wipe === null) {
-            this.updateState('Committing');
+            this.updateState('Configuring: Committing');
             command = new Command(`\r\nCommit\r\n`, 'COMMIT', 5000);
         } else {
             throw 'ERROR: Unknown commit type.';

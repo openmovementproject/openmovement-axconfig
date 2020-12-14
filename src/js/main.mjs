@@ -303,6 +303,10 @@ const updateStatus = () => {
 
 const deviceChanged = async () => {
     currentDevice = deviceManager.getSingleDevice();
+
+    // TODO: Check we should always simulate a reconfigure...
+    reconfigure();
+
     if (!currentDevice) {
         console.log('DEVICECHANGED: (none)');
         await updateStatus();
@@ -579,6 +583,14 @@ const logClear = () => {
     }
 }
 
+const reconfigure = (clicked) => {
+    document.querySelector('body').classList.remove('completed');
+    if (clicked && typeof globalParams.focus !== 'undefined') {
+        document.querySelector('#code').select();
+        document.querySelector('#code').focus();
+    }
+}
+
 let isConfiguring = false;
 const submit = async () => {
     //const code = document.querySelector(codeInput).value;
@@ -658,7 +670,7 @@ window.addEventListener('DOMContentLoaded', async (event) => {
     deviceManager.startup(deviceChanged);
 
     document.querySelector('#reconfigure').addEventListener('click', async () => {
-        document.querySelector('body').classList.remove('completed');
+        reconfigure(true);
     });
 
     document.querySelector('#add_usb_device').addEventListener('click', async () => {
@@ -763,6 +775,13 @@ window.addEventListener('DOMContentLoaded', async (event) => {
     setInterval(timed, 5 * 1000);
 
     
+
+if (1) {
+    // TODO: Remove this temporary style test
+    setResult('ℹ️ Configured', false);
+    document.querySelector('body').classList.add('completed');
+}
+
 });
 
 

@@ -33,74 +33,82 @@
   </header>
 
   <main>
-    <div class="complete">
-      <div class="main_button">ℹ️ Configured <input id="reconfigure" class="button" type="button" value="Reconfigure..."></div>
-    </div>
-
-    <form class="incomplete">
-      <fieldset>
-        <legend>Configuration</legend>
-        <div><label accesskey="C" for="code">Code: </label><input id="code" type="text" placeholder="..."></div>
-        <details id="details" open>
-          <summary>Details</summary>
-          <div><label for="session">Session ID: </label><input id="session" type="number" placeholder="(none)"></div>
-          <div><label for="rate">Rate: </label>
-            <select id="rate" placeholder="">
-              <option value="3200">3200 Hz</option>
-              <option value="1600">1600 Hz</option>
-              <option value="800">800 Hz</option>
-              <option value="400">400 Hz</option>
-              <option value="200">200 Hz</option>
-              <option value="100" selected>100 Hz</option>
-              <option value="50">50 Hz</option>
-              <option value="25">25 Hz</option>
-              <option value="12.5">12.5 Hz</option>
-            </select>
-          </div>
-          <div><label for="range">Range: </label>
-            <select id="range" placeholder="">
-              <option value="16">&PlusMinus;16&#x1D454;</option>
-              <option value="8" selected>&PlusMinus;8&#x1D454;</option>
-              <option value="4">&PlusMinus;4&#x1D454;</option>
-              <option value="2">&PlusMinus;2&#x1D454;</option>
-            </select>
-          </div>
-          <div><label for="gyro">Gyro: </label>
-            <select id="gyro" placeholder="">
-              <option value="2000">2000 &deg;&#x2215;s</option>
-              <option value="1000">1000 &deg;&#x2215;s</option>
-              <option value="500">500 &deg;&#x2215;s</option>
-              <option value="250">250 &deg;&#x2215;s</option>
-              <option value="0" selected>(none)</option>
-            </select>
-          </div>
-          <div><label for="metadata">Metadata: </label><input id="metadata" type="text" placeholder="(none)"></div>
-          <div><label for="delay">Delay (h): </label><input id="delay" type="number" min="0" placeholder="(hours)" step="any"></div>
-          <div><label for="start">Start: </label><input id="start" type="datetime-local"></div>
-          <div><label for="duration">Duration (h): </label><input id="duration" type="number" min="0" placeholder="(hours)" step="any"></div>
-          <div><label for="stop">Stop: </label><input id="stop" type="datetime-local"></div>
-        </details>
-        <div><output id="result" value="-"></output></div>
-      </fieldset>
-      <div class="connected-valid">
-        <div class="main_button"><input class="button" type="submit" value="Configure"></div>
+    <form>
+        
+      <div class="complete">
+        <div class="status">✅ Configured &mdash; please disconnect device.</div>
+        <div class="main_button"><input id="reconfigure" class="button link" type="button" value="Reconfigure..."></div>
       </div>
+      <div class="incomplete">
+        <fieldset>
+          <legend>Configuration</legend>
+          <div><label accesskey="C" for="code">Code: </label><input id="code" type="text" placeholder="..."></div>
+          <details id="details" open>
+            <summary>Details</summary>
+            <div><label for="session">Session ID: </label><input id="session" type="number" placeholder="(none)"></div>
+            <div><label for="rate">Rate: </label>
+              <select id="rate" placeholder="">
+                <option value="3200">3200 Hz</option>
+                <option value="1600">1600 Hz</option>
+                <option value="800">800 Hz</option>
+                <option value="400">400 Hz</option>
+                <option value="200">200 Hz</option>
+                <option value="100" selected>100 Hz</option>
+                <option value="50">50 Hz</option>
+                <option value="25">25 Hz</option>
+                <option value="12.5">12.5 Hz</option>
+              </select>
+            </div>
+            <div><label for="range">Range: </label>
+              <select id="range" placeholder="">
+                <option value="16">&PlusMinus;16&#x1D454;</option>
+                <option value="8" selected>&PlusMinus;8&#x1D454;</option>
+                <option value="4">&PlusMinus;4&#x1D454;</option>
+                <option value="2">&PlusMinus;2&#x1D454;</option>
+              </select>
+            </div>
+            <div><label for="gyro">Gyro: </label>
+              <select id="gyro" placeholder="">
+                <option value="2000">2000 &deg;&#x2215;s</option>
+                <option value="1000">1000 &deg;&#x2215;s</option>
+                <option value="500">500 &deg;&#x2215;s</option>
+                <option value="250">250 &deg;&#x2215;s</option>
+                <option value="0" selected>(none)</option>
+              </select>
+            </div>
+            <div><label for="metadata">Metadata: </label><input id="metadata" type="text" placeholder="(none)"></div>
+            <div><label for="delay">Delay (h): </label><input id="delay" type="number" min="0" placeholder="(hours)" step="any"></div>
+            <div><label for="start">Start: </label><input id="start" type="datetime-local"></div>
+            <div><label for="duration">Duration (h): </label><input id="duration" type="number" min="0" placeholder="(hours)" step="any"></div>
+            <div><label for="stop">Stop: </label><input id="stop" type="datetime-local"></div>
+          </details>
+          <div><output id="result" value="-"></output></div>
+        </fieldset>
+      </div>
+
       <div class="disconnected">
         <div class="main_button">
           <input class="button" id="add_usb_device" type="button" value="Connect USB device...">
           <input class="button" id="add_serial_device" type="button" value="Connect serial device...">
         </div>
       </div>
+      <div class="connected">
+        <fieldset id="device-fieldset">
+          <legend>Device</legend>
+          <div><label for="device-id">Id: </label><output id="device-id">-</output></div>
+          <div><label for="battery">Battery: </label><meter id="battery-meter" min="0" max="100" low="30" high="85" optimum="100" value="0"></meter> <output id="battery">-</output></div>
+          <div><label for="state">State: </label><output id="state">-</output></div>
+        </fieldset>
+      </div>
+
+      <div class="incomplete">
+        <div class="connected-valid">
+          <div class="main_button"><input class="button" type="submit" value="Configure"></div>
+        </div>
+      </div>
+
     </form>
 
-    <form class="connected">
-      <fieldset id="device-fieldset">
-        <legend>Device</legend>
-        <div><label for="device-id">Id: </label><output id="device-id">-</output></div>
-        <div><label for="battery">Battery: </label><meter id="battery-meter" min="0" max="100" low="30" high="85" optimum="100" value="0"></meter> <output id="battery">-</output></div>
-        <div><label for="state">State: </label><output id="state">-</output></div>
-      </fieldset>
-    </form>
   </main>
 
   <footer>
