@@ -10,6 +10,7 @@ export function localTime(date) {
     return new Date(date.getTime() - tzOffset);
 }
 
+// Returns a string representation for the specified local time (without any timezone information)
 export function localTimeString(date, precision) {
     const local = localTime(date);
     if (local === null) return null;
@@ -21,6 +22,7 @@ export function localTimeString(date, precision) {
     return localString;                                     // milliseconds
 }
 
+// Interprets a string in the local time zone as a true Date
 export function localTimeValue(str) {
     if (typeof str !== 'string' || str.length === 0) return null;
     if (str.length == 16) str += ':00';

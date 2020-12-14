@@ -1,4 +1,4 @@
-import { sleep, localTime } from './util.mjs';
+import { sleep, localTime, localTimeString } from './util.mjs';
 
 /*
 {
@@ -800,7 +800,7 @@ export default class Ax3Device {
         const DATE_MIN = Date.UTC(-271821, 3, 20);
         const DATE_MAX = Date.UTC(275760, 8, 13);
 
-        const now = localTime(new Date());
+        const now = new Date(); //localTime(new Date());
 
         let from = this.status.start;
         if (from === -1) from = DATE_MAX;
@@ -912,11 +912,14 @@ export default class Ax3Device {
             return {
                 // Device information
                 time: config.time,
+                timeDevice: localTimeString(config.time, 'S'),
                 deviceId: this.status.id.deviceId,
                 battery: battery.percent,
                 // Config
                 start: config.start,
+                startDevice: localTimeString(config.start, 'S'),
                 stop: config.stop,
+                stopDevice: localTimeString(config.stop, 'S'),
                 session: config.session,
                 rate: config.rate,
                 range: config.range,
