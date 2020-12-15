@@ -148,7 +148,7 @@ function parametersChanged(params = globalParams) {
     let readonly = false; // default
     if (typeof params.editable !== 'undefined') readonly = false;
     if (typeof params.readonly !== 'undefined') readonly = true;
-    for (let input of ['#session', '#rate', '#range', '#gyro', '#start', '#delay', '#duration', '#stop', '#metadata']) {
+    for (let input of ['#session', '#rate', '#range', '#gyro', '#start', '#delay', '#duration', '#stop', '#metadata', '#minbattery']) {
         const elem = document.querySelector(input);
         if (readonly) {
             elem.setAttribute('disabled', 'true');
@@ -176,7 +176,7 @@ function parametersChanged(params = globalParams) {
         metadata: '',
     };
     let changedConfig = false;
-    for (let part of ['session', 'rate', 'range', 'gyro', 'start', 'stop', 'metadata']) {
+    for (let part of ['session', 'rate', 'range', 'gyro', 'start', 'stop', 'metadata', 'minbattery']) {
         if (typeof params[part] !== 'undefined') { newConfig[part] = params[part]; }
         changedConfig |= (typeof newConfig[part] !== typeof lastConfig[part] || newConfig[part] == lastConfig[part]);
     }
@@ -219,6 +219,7 @@ const updateForm = (config) => {
     document.querySelector('#rate').value = typeof config.rate !== 'undefined' ? config.rate : '';
     document.querySelector('#range').value = typeof config.range !== 'undefined' ? config.range : '';
     document.querySelector('#gyro').value = typeof config.gyro !== 'undefined' ? config.gyro : '';
+    document.querySelector('#minbattery').value = typeof config.minbattery !== 'undefined' ? config.minbattery : '';
 
     let start = parseDate(config.start);
     if (!start) {
@@ -466,7 +467,9 @@ const configFromForm = () => {
         start: localTimeValue(document.querySelector('#start').value),
         stop: localTimeValue(document.querySelector('#stop').value),
         metadata: document.querySelector('#metadata').value,
+        minbattery: document.querySelector('#minbattery').value == '' ? null : parseInt(document.querySelector('#minbattery').value),
     };
+
     const notSpecified = [];
     if (typeof config.session !== 'number' || isNaN(config.session)) notSpecified.push('no session ID');
     if (typeof config.start !== 'object' || !config.start) notSpecified.push('no start time');
@@ -769,7 +772,7 @@ window.addEventListener('DOMContentLoaded', async (event) => {
         //elem.addEventListener('propertychange', stopChanged);
     }
 
-    for (let input of ['#session', '#rate', '#range', '#gyro', '#delay', '#start', '#duration', '#stop', '#metadata']) {
+    for (let input of ['#session', '#rate', '#range', '#gyro', '#delay', '#start', '#duration', '#stop', '#metadata', '#minbattery']) {
         const elem = document.querySelector(input);
         elem.addEventListener('change', updateEnabled);
         elem.addEventListener('input', updateEnabled);

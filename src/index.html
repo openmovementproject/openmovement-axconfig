@@ -26,7 +26,7 @@
 <body>
 <div class="main">
   <header>
-    <h1>AX Configure <span class="version">beta-2020-12-15</span></h1>
+    <h1>AX Configure <span class="version">beta-2020-12-15b</span></h1>
     <div id="warnings"><ul>
       <noscript>⚠️ Scripting not enabled.</noscript>
     </div>
@@ -82,6 +82,7 @@
             <div><label for="start">Start: </label><input id="start" type="datetime-local"></div>
             <div><label for="duration">Duration (h): </label><input id="duration" type="number" min="0" placeholder="(hours)" step="any"></div>
             <div><label for="stop">Stop: </label><input id="stop" type="datetime-local"></div>
+            <div class="hidden"><label for="minbattery">Min.Batt.: </label><input id="minbattery" type="number" min="0" max="101" placeholder="(%)" step="1"></div>
           </details>
           <div><output id="result" value="-"></output></div>
         </fieldset>

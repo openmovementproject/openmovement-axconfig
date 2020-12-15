@@ -229,5 +229,9 @@ footer a:hover, footer a:active {
 	text-align: right;
 }
 
+.hidden {
+	display: none;
+}
+
 body.nolog .log-span { display: none; }
 body.nologclear .log-clear-span { display: none; }

@@ -49,6 +49,7 @@ Options can be added to the address by appending a hash (`#`) then `key=value` p
 * `start=0` - delay until start from current time (hours, default `0`); or an exact start time (`YYYY-MM-DDThh:mm:ss`)
 * `stop=168` - duration of recording (hours, default 168); or an exact stop time (`YYYY-MM-DDThh:mm:ss`)
 * `metadata=` - metadata to add to the recording (use URL-encoded format which will need double-escaping in a URL; subject code `_sc` will be added from the `config` value)
+* `minbattery=80` - minimum battery percentage at configuration time (configuration will fail unless the device is at this level, default none).
 * `debug` - show debug console information.
 
 ...an example URL with multiple options: `https://config.openmovement.dev/#readonly&nodetails&rate=100&range=8&start=0&stop=168`.  If you wanted to add a *Study Code*, something like this: `https://config.openmovement.dev/#readonly&nodetails&rate=100&range=8&start=0&stop=168&metadata=_s%3dMy_Study_Name`.  And if you also knew the recording identifier, it can be embedded into the link: `https://config.openmovement.dev/#readonly&nodetails&rate=100&range=8&start=0&stop=168&metadata=_s%3dMy_Study_Name&code=123abc456`.

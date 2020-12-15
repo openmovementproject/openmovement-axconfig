@@ -839,7 +839,7 @@ export default class Ax3Device {
             await this.tryAndRetry(() => this.open());
 
             const defaultConfig = {
-                minBattery: null,
+                minbattery: null,
                 configLed: Ax3Device.LED_BLUE,
                 time: null,
                 session: 0,
@@ -876,8 +876,8 @@ export default class Ax3Device {
             await this.tryAndRetry(() => this.setLed(config.configLed));
 
             console.log('BATTERY=' + JSON.stringify(this.status.battery));
-            if (this.status.battery.percent < config.minBattery) {
-                throw `ERROR: Device battery level too low: ${this.status.battery.percent}% (required ${config.minBattery}%).`
+            if (this.status.battery.percent < config.minbattery) {
+                throw `ERROR: Device battery level too low: ${this.status.battery.percent}% (required ${config.minbattery}%).`
             }
 
             if (config.noData) {
