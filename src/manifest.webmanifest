@@ -1,7 +1,6 @@
 {
   "name": "AX Config",
   "short_name": "AX Config",
-  "start_url": ".",
   "display": "standalone",
   "background_color": "#fff",
   "description": "Open Movement AX device configuration app.",
