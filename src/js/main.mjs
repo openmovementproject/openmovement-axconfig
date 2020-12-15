@@ -229,7 +229,7 @@ const updateForm = (config) => {
         startChanged();
     }
 
-    let stop = relativeTime(config.stop, start);
+    let stop = relativeTime(config.stop, localTimeValue(document.querySelector('#start').value));
     if (stop === null) {
         document.querySelector('#stop').value = document.querySelector('#start').value;
     } else {
