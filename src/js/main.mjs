@@ -243,6 +243,46 @@ const updateForm = (config) => {
 }
 
 
+function getWarnings(config) {
+    const warnings = [];
+
+    // Warning: start time is in the past
+    const now = new Date();
+    if (config.stop.getTime() < now) {
+        warnings.push('Recording interval has already finished.');
+    } else if (config.start.getTime() + 66 * 1000 < now) {
+        warnings.push('Recording interval has already started.');
+    } else if (config.start.getTime() <= now) {
+        //warnings.push('Recording interval is starting immediately.');
+    }
+
+    // Warning: start time is a long time in the future
+    if (config.start.getTime() > now + 21 * 24 * 60 * 60 * 1000) {
+        warnings.push('Start time is a long time in the future.');
+    }
+
+    // Warning: chosen start and stop does not make an interval
+    const duration = (config.stop.getTime() - config.start.getTime()) / 1000;
+    if (duration <= 0) {
+        warnings.push('Start/stop times do not make an interval.');
+    }
+
+    // Warning: large recording durations
+    // AX3 packed 119009040 samples; AX3 unpacked 79339360 samples; AX6 accel. only 158714880 samples; AX6 accel. + gyro. 79357440 samples
+    if (duration * config.rate > 158714880) {
+        warnings.push('Duration is too long (for this rate).');
+    }
+
+    // Warning: frequency invalid
+    if (![6, 6.25, 12, 12.5, 25, 50, 100, 200, 400, 800, 1600, 3200].includes(config.rate)) {
+        warnings.push('Rate is not valid.');
+    }
+
+    // Battery warning is given at configuration time
+    
+    return warnings;
+}
+
 
 const updateEnabled = () => {
     //const code = document.querySelector(codeInput).value;
@@ -251,7 +291,12 @@ const updateEnabled = () => {
     try {
         config = configFromForm();
         //console.log(JSON.stringify(config, null, 4));
-        setResult('', false);
+        const warnings = getWarnings(config);
+        if (warnings && warnings.length > 0) {
+            setResult('WARNING: ' + warnings.join('; '), true);
+        } else {
+            setResult('', false);
+        }
         console.log('CONFIG-VALID: true');
         document.querySelector('body').classList.add('config-valid');
     } catch (e) {
@@ -305,7 +350,7 @@ const deviceChanged = async () => {
     currentDevice = deviceManager.getSingleDevice();
 
     // TODO: Check we should always simulate a reconfigure...
-    reconfigure();
+    reconfigure(true, true);
 
     if (!currentDevice) {
         console.log('DEVICECHANGED: (none)');
@@ -583,9 +628,12 @@ const logClear = () => {
     }
 }
 
-const reconfigure = (clicked) => {
+const reconfigure = (clear, focus) => {
     document.querySelector('body').classList.remove('completed');
-    if (clicked && typeof globalParams.focus !== 'undefined') {
+    if (!clear) {
+        document.querySelector('#code').value = '';
+    }
+    if (focus && typeof globalParams.focus !== 'undefined') {
         document.querySelector('#code').select();
         document.querySelector('#code').focus();
     }
@@ -670,7 +718,11 @@ window.addEventListener('DOMContentLoaded', async (event) => {
     deviceManager.startup(deviceChanged);
 
     document.querySelector('#reconfigure').addEventListener('click', async () => {
-        reconfigure(true);
+        reconfigure(false, true);
+    });
+
+    document.querySelector('#configure_new').addEventListener('click', async () => {
+        reconfigure(true, true);
     });
 
     document.querySelector('#add_usb_device').addEventListener('click', async () => {
@@ -733,6 +785,11 @@ window.addEventListener('DOMContentLoaded', async (event) => {
         document.querySelector('#add_serial_device').setAttribute('disabled', 'true');
     }
 
+    document.querySelector('#reset').addEventListener('click', (e) => {
+        reconfigure(true, true);
+        location.reload();
+    });
+
     document.querySelector('#log-download').addEventListener('click', (e) => {
         e.preventDefault();
         try {
@@ -773,14 +830,6 @@ window.addEventListener('DOMContentLoaded', async (event) => {
     };
 
     setInterval(timed, 5 * 1000);
-
-    
-
-if (1) {
-    // TODO: Remove this temporary style test
-    setResult('ℹ️ Configured', false);
-    document.querySelector('body').classList.add('completed');
-}
 
 });
 
