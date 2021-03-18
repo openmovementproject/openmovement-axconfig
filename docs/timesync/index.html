@@ -10,6 +10,7 @@
             background-color: black;
             color: white;
             text-align: center;
+            overflow: hidden;
         }
         body.active {
             background-color: white;
@@ -103,7 +104,7 @@
 
         let clockInterval = null
         function switchClock(enabled) {
-console.log(`@${(new Date()).toISOString()}=${enabled} hidden=${document.hidden} visibilityState=${document.visibilityState}`)
+            //console.log(`@${(new Date()).toISOString()}=${enabled} hidden=${document.hidden} visibilityState=${document.visibilityState}`)
             updateClock()
             if (!clockInterval && enabled) {
                 clockInterval = setInterval(updateClock, 10)
