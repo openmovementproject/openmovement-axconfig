@@ -11,6 +11,11 @@
             color: white;
             text-align: center;
             overflow: hidden;
+            
+            user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            -webkit-user-select: none;
         }
         body.active {
             background-color: white;
@@ -25,6 +30,12 @@
             font-size: 12vw;
             line-height: 33vh;
             white-space: pre;
+            pointer-events: none;
+            
+            user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            -webkit-user-select: none;
         }
     </style>
 </head>
@@ -34,18 +45,27 @@
         let activeInterval = null
         let activeStart = null
         let activeElapsed = ''
+        let vibrateExpires = null
+        const vibrateTime = 500
+        const updateInterval = 10
         
         function update() {
+            const now = Date.now()
             if (activeInterval) {
-                if (window.navigator.vibrate && window.navigator.vibrate(100)) {
-                    document.body.classList.add('active')
-                } else {
-                    document.body.classList.add('error')
+                if (!vibrateExpires || vibrateExpires - now < 2 * updateInterval) {
+                    if (window.navigator.vibrate && window.navigator.vibrate(100)) {
+                        vibrateExpires = now + vibrateTime
+                        document.body.classList.add('active')
+                    } else {
+                        vibrateExpires = null
+                        document.body.classList.add('error')
+                    }
                 }
-                const elapsed = Date.now() - activeStart
+                const elapsed = now - activeStart
                 activeElapsed = '' + (elapsed / 1000).toFixed(3) + ' s'
             } else {
                 if (window.navigator.vibrate) window.navigator.vibrate(0)
+                vibrateExpires = null
                 document.body.classList.remove('active')
                 document.body.classList.remove('error')
                 //activeElapsed = '-'
@@ -107,7 +127,7 @@
             //console.log(`@${(new Date()).toISOString()}=${enabled} hidden=${document.hidden} visibilityState=${document.visibilityState}`)
             updateClock()
             if (!clockInterval && enabled) {
-                clockInterval = setInterval(updateClock, 10)
+                clockInterval = setInterval(updateClock, updateInterval)
             } else if (clockInterval && !enabled) {
                 clearInterval(clockInterval)
                 clockInterval = null
