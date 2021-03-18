@@ -99,11 +99,12 @@
             }, true)
             
             document.addEventListener('touchstart', (e) => {
-                e.preventDefault()
                 activate(true)
             }, true)
             document.addEventListener('touchend', (e) => {
-                e.preventDefault()
+                activate(false)
+            }, true)
+            document.addEventListener('touchcancel', (e) => {
                 activate(false)
             }, true)
 
