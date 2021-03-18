@@ -119,10 +119,16 @@
             }
         })
 
+        function pad(str, size = 2) {
+            return ('0'.repeat(size - 1) + str).slice(-size)
+        }
+
         function updateClock() {
             if (activeInterval) update()
-            const now = (new Date()).toISOString().replace('T', '\n').substr(0, 23)
-            document.getElementById('output').innerText = now + '\n' + activeElapsed
+            const now = new Date()
+            //const dateTime = (new Date()).toISOString().replace('T', '\n').substr(0, 23) // UTC timestamp
+            const dateTime = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) + '\n' + pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds()) + '.' + pad(now.getMilliseconds(), 3)
+            document.getElementById('output').innerText = dateTime + '\n' + activeElapsed
         }
 
         let clockInterval = null
