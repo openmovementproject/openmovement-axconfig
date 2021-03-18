@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time Sync Marker</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: black;
+            color: white;
+            text-align: center;
+        }
+        body.active {
+            background-color: white;
+            color: black;
+        }
+        body.error {
+            background-color: red;
+            color: white;
+        }
+        output {
+            font-family: monospace;
+            font-size: 12vw;
+            line-height: 33vh;
+            white-space: pre;
+        }
+    </style>
+</head>
+<body>
+    <output id="output"></output>
+    <script>
+        let activeInterval = null
+        let activeStart = null
+        let activeElapsed = ''
+        
+        function update() {
+            if (activeInterval) {
+                if (window.navigator.vibrate && window.navigator.vibrate(100)) {
+                    document.body.classList.add('active')
+                } else {
+                    document.body.classList.add('error')
+                }
+                const elapsed = Date.now() - activeStart
+                activeElapsed = '' + (elapsed / 1000).toFixed(3) + ' s'
+            } else {
+                if (window.navigator.vibrate) window.navigator.vibrate(0)
+                document.body.classList.remove('active')
+                document.body.classList.remove('error')
+                //activeElapsed = '-'
+            }
+            // (Output in clock timer instead)
+            //document.getElementById('output').innerText = activeElapsed
+        }
+
+        function activate(active) {
+            if (!activeInterval && active) {
+                activeStart = Date.now()
+                activeInterval = true
+                update()
+                // (Updated from clock timer instead)
+                //activeInterval = setInterval(update, 10)
+            } else if (activeInterval && !active) {
+                if (activeInterval !== true) clearInterval(activeInterval)
+                activeInterval = null
+                update()
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.addEventListener('mousedown', (e) => {
+                e.preventDefault()
+                activate(true)
+            }, true)
+            document.addEventListener('mouseup', (e) => {
+                e.preventDefault()
+                activate(false)
+            }, true)
+            
+            document.addEventListener('touchstart', (e) => {
+                e.preventDefault()
+                activate(true)
+            }, true)
+            document.addEventListener('touchend', (e) => {
+                e.preventDefault()
+                activate(false)
+            }, true)
+
+            document.addEventListener('visibilitychange', () => {
+                switchClock(!document.hidden)
+            })
+
+            if (typeof document.hidden === 'undefined' || !document.hidden) {
+                switchClock(true)
+            }
+        })
+
+        function updateClock() {
+            if (activeInterval) update()
+            const now = (new Date()).toISOString().replace('T', '\n').substr(0, 23)
+            document.getElementById('output').innerText = now + '\n' + activeElapsed
+        }
+
+        let clockInterval = null
+        function switchClock(enabled) {
+console.log(`@${(new Date()).toISOString()}=${enabled} hidden=${document.hidden} visibilityState=${document.visibilityState}`)
+            updateClock()
+            if (!clockInterval && enabled) {
+                clockInterval = setInterval(updateClock, 10)
+            } else if (clockInterval && !enabled) {
+                clearInterval(clockInterval)
+                clockInterval = null
+            }
+        }
+    </script>
+</body>
+</html>
