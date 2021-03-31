@@ -121,7 +121,7 @@ if (window.applicationCache) {
 
 let currentDevice = null;
 let lastConfig = {};
-let afterClearCode = false;
+let disconnectClearCode = false;
 let deviceManager = null;
 let keyInput = null;
 const codeInput = '#code';
@@ -344,17 +344,32 @@ const updateStatus = () => {
     document.querySelector('#battery').value = Number.isNaN(parseInt(status.battery)) ? '-' : status.battery + "%";
     document.querySelector('#state').value = status.state || status.errorState || '-';
 
+    if (currentDevice && currentDevice.status && currentDevice.status.recordingStarted) {
+        // Recording started
+        document.querySelector('#configure').value = '⚠️ Delete device data and reconfigure';
+    } else if (currentDevice && currentDevice.status && currentDevice.status.recordingConfigured) {
+        // Configured but not started
+        document.querySelector('#configure').value = '🔁 Reconfigure';
+    } else {
+        // Not configured (or no device)
+        document.querySelector('#configure').value = 'Configure';
+    }
+
     updateEnabled();
 }
 
 const deviceChanged = async () => {
     currentDevice = deviceManager.getSingleDevice();
 
-    // TODO: Check we should always simulate a reconfigure...
-    reconfigure(true, true);
-
     if (!currentDevice) {
         console.log('DEVICECHANGED: (none)');
+
+        // Simulate a reconfigure when a device is removed after successful programming...
+        if (disconnectClearCode) {
+            disconnectClearCode = false;
+            reconfigure(true, true);
+        }
+
         await updateStatus();
     } else {
         console.log('DEVICECHANGED: ' + (currentDevice.serial ? currentDevice.serial : '<no serial>'));
@@ -561,19 +576,18 @@ const codeChanged = (code) => {
     updateEnabled();
 };
 
-const configMatch = (desired, actual) => {
-    let match = true;
+const configMismatches = (desired, actual) => {
+    const mismatches = [];
     for (let key of Object.keys(desired)) {
         if (!key in actual) {
             console.log(`ERROR: Configuration key not found: ${key}`);
-            match = false;
-        }
-        if (desired[key] != actual[key]) {
+            mismatches.push([{[key]: desired[key]}, null]);
+        } else if (desired[key] != actual[key]) {
             console.log(`ERROR: Configuration value not matched for '${key}': ${desired[key]} != ${actual[key]}.`);
-            match = false;
+            mismatches.push([{[key]: desired[key]}, {[key]: actual[key]}]);
         }
     }
-    return match;
+    return mismatches;
 }
 
 
@@ -633,13 +647,16 @@ const logClear = () => {
 
 const reconfigure = (clear, focus) => {
     document.querySelector('body').classList.remove('completed');
-    if (!clear) {
+    disconnectClearCode = false;
+    if (clear) {
+        keyInput.setValue('');
         document.querySelector('#code').value = '';
     }
     if (focus && typeof globalParams.focus !== 'undefined') {
         document.querySelector('#code').select();
         document.querySelector('#code').focus();
     }
+    codeChanged(document.querySelector('#code').value);
 }
 
 let isConfiguring = false;
@@ -667,21 +684,17 @@ const submit = async () => {
                 deviceType = currentDevice.deviceType;
             }
 
-            if (configMatch(config, status)) {
+            const mismatches = configMismatches(config, status);
+            if (mismatches.length == 0) {
                 setResult('ℹ️ Configured', false);
                 document.querySelector('body').classList.add('completed');
 
                 logRecord(deviceType + '-CONFIG-OK', status);
                 
-                // Post-config behaviour
-                if (afterClearCode) {
-                    keyInput.setValue('');
-                    document.querySelector('#code').value = '';
-                    document.querySelector('#code').select();
-                    document.querySelector('#code').focus();
-                }
+                // Removing after a successful configure will clear the code
+                disconnectClearCode = true;
             } else {
-                setResult('ℹ️ Configured but mismatched', false);
+                setResult('ℹ️ Configured but mismatched: ' + JSON.stringify(mismatches), true);
                 logRecord(deviceType + '-CONFIG-FAILURE', config);
             }
 
@@ -720,9 +733,12 @@ window.addEventListener('DOMContentLoaded', async (event) => {
 
     deviceManager.startup(deviceChanged);
 
-    document.querySelector('#reconfigure').addEventListener('click', async () => {
-        reconfigure(false, true);
-    });
+    const reconfigureButton = document.querySelector('#reconfigure');
+    if (reconfigureButton) {
+        reconfigureButton.addEventListener('click', async () => {
+            reconfigure(false, true);
+        });
+    }
 
     document.querySelector('#configure_new').addEventListener('click', async () => {
         reconfigure(true, true);
