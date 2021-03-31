@@ -16,6 +16,7 @@
     "url": "ssh://git@github.com:digitalinteraction/openmovement-axconfig.git"
   },
   "keywords": [
+    "Open Movement",
     "AX3",
     "AX6",
     "configuration",
