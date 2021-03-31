@@ -1,4 +1,9 @@
-import Quagga from './quagga.js';
+// Uses Quagga2 from: https://github.com/ericblade/quagga2
+// Current version: 1.3.1
+// ...from: https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.3.1/dist/quagga.js
+// ...and:  https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.3.1/dist/quagga.min.js
+
+import Quagga from './quagga.min.js';
 
 export default class Barcode {
 
