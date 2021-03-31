@@ -161,7 +161,7 @@ fieldset label {
 }
 
 fieldset input[type=text], fieldset input[type=number], fieldset input[type=datetime-local], fieldset output, fieldset meter , fieldset select {
-	width: 6.6em;
+	width: 5em;
 	flex-grow: 1;
 }
 

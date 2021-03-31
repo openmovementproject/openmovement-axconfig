@@ -23,6 +23,7 @@
         "axconfig",
         "baudrate",
         "callstack",
+        "datetime",
         "localstorage",
         "lsusb",
         "minbattery",
