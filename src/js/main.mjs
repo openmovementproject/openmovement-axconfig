@@ -892,7 +892,7 @@ window.addEventListener('DOMContentLoaded', async (event) => {
 
     document.querySelector('#stop-scan').addEventListener('click', async () => {
         try {
-            Barcode.cancel();
+            await Barcode.cancel();
         } catch (e) {
             console.error(e);
         }

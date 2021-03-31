@@ -13,6 +13,7 @@
         "READL",
         "RFID",
         "SERVICEWORKER",
+        "Scanline",
         "YYYYMMDD",
         "accesskey",
         "adduser",
@@ -22,8 +23,10 @@
         "autosubmit",
         "axconfig",
         "baudrate",
+        "browserslist",
         "callstack",
         "datetime",
+        "digitalinteraction",
         "localstorage",
         "lsusb",
         "minbattery",
@@ -47,6 +50,7 @@
         "udevadm",
         "unopenable",
         "upsert",
+        "webconfig",
         "webusb"
     ]
 }

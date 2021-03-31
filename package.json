@@ -1,7 +1,7 @@
 {
-  "name": "ax3-webconfig",
+  "name": "ax-webconfig",
   "version": "1.0.0",
-  "description": "AX3 Device Web Configuration",
+  "description": "AX Device Web Configuration",
   "main": "index.js",
   "directories": {
     "lib": "lib"

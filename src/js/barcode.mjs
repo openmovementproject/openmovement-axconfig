@@ -11,10 +11,10 @@ export default class Barcode {
         this.lastResult = null;
     }
    
-    init(initOptions) {
-        this.stop();
+    async init(initOptions) {
+        await this.stop();
         this.target = initOptions.inputStream.target;
-        return new Promise((resolve, reject) => {
+        await new Promise((resolve, reject) => {
             Quagga.init(initOptions, (err) => {
                 if (err) {
                     console.log("BARCODE: Init error: " + err);
@@ -28,8 +28,8 @@ export default class Barcode {
         });
     }
 
-    start() {
-        this.stop();
+    async start() {
+        await this.stop();
 
         Quagga.start();
 
@@ -66,9 +66,9 @@ export default class Barcode {
         // }
     }
 
-    stop() {
+    async stop() {
         if (this.started) {
-            Quagga.stop();
+            await Quagga.stop();
             this.started = false;
         }
 
@@ -101,9 +101,9 @@ export default class Barcode {
 
 Barcode.instance = null;
 
-Barcode.cancel = () => {
+Barcode.cancel = async () => {
     if (Barcode.instance) {
-        Barcode.instance.stop();
+        await Barcode.instance.stop();
     }
 }
 
@@ -173,17 +173,11 @@ Barcode.scan = async (options) => {
 
     let result = null;
     try {
-console.log('BARCODE: Before init()');
         await Barcode.instance.init(initOptions);
-console.log('BARCODE: Starting...');
-        Barcode.instance.start();
-console.log('BARCODE: Waiting...');
+        await Barcode.instance.start();
         result = await Barcode.instance.waitForScanOrCancel();
     } finally {
-console.log('BARCODE: Stopping...');
-        Barcode.instance.stop();
-console.log('BARCODE: Finished');
-
+        await Barcode.instance.stop();
         document.querySelector(elementSelector).innerHTML = '';
     }
 
