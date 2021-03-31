@@ -111,7 +111,7 @@ body.console #output {
 }
 
 /*input[type="button"]*/
-.button:disabled {
+input[type="button"]:disabled, input[type="submit"]:disabled, .button:disabled {
 	background: #dddddd;
 	cursor: not-allowed;
 }
@@ -235,3 +235,38 @@ footer a:hover, footer a:active {
 
 body.nolog .log-span { display: none; }
 body.nologclear .log-clear-span { display: none; }
+
+
+/* Scan Controls */
+.scan-controls {
+	margin-left: 10px;
+	display: none;
+	text-align: right;
+}
+body.allow-scan .scan-controls { display: block; }
+
+.scan-controls #start-scan { display: inline; }
+.scan-controls #stop-scan { display: none; }
+
+body.scanning .scan-controls #start-scan { display: none; }
+body.scanning .scan-controls #stop-scan { display: inline; }
+
+/* Scanner */
+#interactive.viewport {
+    position: relative;
+	height: 0;
+	transition: height 0.5s ease-out;
+}
+body.scanning #interactive.viewport {
+	height: 480px;
+}
+#interactive.viewport > canvas, #interactive.viewport > video {
+    max-width: 100%;
+    width: 100%;
+}
+canvas.drawing, canvas.drawingBuffer {
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+

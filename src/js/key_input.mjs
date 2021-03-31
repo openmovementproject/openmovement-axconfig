@@ -6,6 +6,11 @@ export default class KeyInput {
         this.inputSelector = inputSelector;
         this.inputBuffer = '';
         this.timeoutId = null;
+        this.autoSubmit = false;
+    }
+
+    setAutoSubmit(autoSubmit) {
+        this.autoSubmit = autoSubmit;
     }
 
     start(changeCallback = null, submitCallback = null) {
@@ -101,7 +106,7 @@ export default class KeyInput {
         if (evt.which < 32) {	// === 13
             if (this.inputBuffer.length > 0 && evt.which == 13) {
                 evt.preventDefault();
-                this.setValue(this.inputBuffer, true);
+                this.setValue(this.inputBuffer, this.autoSubmit);
             }
             allowInput = false;
         }

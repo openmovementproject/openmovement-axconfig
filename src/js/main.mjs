@@ -37,7 +37,7 @@ Add the user to the `plugdev` group: `sudo adduser pi plugdev`
 import { redirectConsole, watchParameters, localTimeString, localTimeValue, download } from './util.mjs';
 import KeyInput from './key_input.mjs';
 import DeviceManager from './device_manager.mjs';
-//import Barcode from './barcode.mjs';
+import Barcode from './barcode.mjs';
 
 window.addEventListener("error", function (e) {
     document.getElementById('warnings').appendChild(document.createTextNode('⚠️ Unhandled error.'));
@@ -70,7 +70,6 @@ function redirect() {
 }
 watchParameters(parametersChanged);
 if (showDebug) { redirect(); }
-
 
 
 // Service Worker Registration
@@ -124,6 +123,8 @@ let lastConfig = {};
 let disconnectClearCode = false;
 let deviceManager = null;
 let keyInput = null;
+let autoSubmit = true;
+let scanReaders = 'code_128'; // 'code_128,ean_8' // 'code_128,ean,ean_8,code_39,code_39_vin,codabar,upc,upc_e,i2of5,2of5,code_93'
 const codeInput = '#code';
 
 //const RELATIVE_CUTOFF = 946684800 * 1000;   // 2000-01-01 (treat as relative time if smaller than this)
@@ -211,6 +212,20 @@ function parametersChanged(params = globalParams) {
     // Disable log/log-clear
     document.querySelector('body').classList.toggle('nolog', typeof params.nolog !== 'undefined');
     document.querySelector('body').classList.toggle('nologclear', typeof params.nologclear !== 'undefined');
+
+    document.querySelector('#add_usb_device').setAttribute('style', allowUsb ? 'display: inline;' : 'display: none;');
+
+    // Barcode scanning
+    let allowScan = true;
+    if (typeof params.noscan !== 'undefined') allowScan = false;
+    if (typeof params.scan !== 'undefined') allowScan = true;
+    document.querySelector('body').classList.toggle('allow-scan', allowScan);
+    if (typeof params.readers !== 'undefined') scanReaders = params.readers;
+
+    // Keyboard (external barcode scanner) auto-submit
+    if (typeof params.autosubmit !== 'undefined') autoSubmit = true;
+    if (typeof params.noautosubmit !== 'undefined') autoSubmit = false;
+    keyInput.setAutoSubmit(autoSubmit);
 }
 
 
@@ -307,7 +322,7 @@ const updateEnabled = () => {
         document.querySelector('body').classList.remove('config-valid');
     }
 
-    const enabled = config && !!currentDevice; // && code.length > 0
+    const enabled = config && !!currentDevice && !isConfiguring; // && code.length > 0
     keyInput.submitEnabled(enabled);
 }
 
@@ -650,7 +665,7 @@ const reconfigure = (clear, focus) => {
     disconnectClearCode = false;
     if (clear) {
         keyInput.setValue('');
-        document.querySelector('#code').value = '';
+        //document.querySelector('#code').value = '';
     }
     if (focus && typeof globalParams.focus !== 'undefined') {
         document.querySelector('#code').select();
@@ -667,9 +682,20 @@ const submit = async () => {
         return;
     }
     try {
+        document.querySelector('body').classList.add('configuring');
         isConfiguring = true;
-        document.querySelector('input[type=submit]').setAttribute('disabled', 'true');
-        document.querySelector('input[type=submit]').style = 'display: none;';
+
+        // Cancel any scan in progress
+        try {
+            Barcode.cancel();
+        } catch (e) {
+            console.error(e);
+        }
+
+        document.querySelector('#configure').setAttribute('disabled', 'true');
+        document.querySelector('#start-scan').setAttribute('disabled', 'true');
+        document.querySelector('#stop-scan').setAttribute('disabled', 'true');
+
         setResult('Configuring...', false);
         const config = configFromForm();
         console.log(JSON.stringify(config, null, 4));
@@ -713,10 +739,14 @@ const submit = async () => {
     } catch (e) {
         console.log('CONFIGURATION: ' + e);
         setResult(e, true);
+    } finally {
+        document.querySelector('body').classList.remove('configuring');
+        isConfiguring = false;
+        
+        document.querySelector('#configure').removeAttribute('disabled');
+        document.querySelector('#start-scan').removeAttribute('disabled');
+        document.querySelector('#stop-scan').removeAttribute('disabled');
     }
-    isConfiguring = false;
-    document.querySelector('input[type=submit]').removeAttribute('disabled');
-    document.querySelector('input[type=submit]').style = '';
 };
 
 window.addEventListener('DOMContentLoaded', async (event) => {
@@ -837,6 +867,34 @@ window.addEventListener('DOMContentLoaded', async (event) => {
             } catch (e) {
                 console.log(e);
             }
+        }
+    });
+
+    document.querySelector('#start-scan').addEventListener('click', async () => {
+        try {
+            document.querySelector('body').classList.add('scanning');
+            const scanResult = await Barcode.scan({
+                readers: scanReaders,
+            });
+            if (scanResult != null) {
+                console.log('SCAN: Result=' + scanResult);
+                keyInput.setValue(scanResult);
+            } else {
+                console.log('SCAN: No result.');
+            }
+        } catch (e) {
+            console.log('SCAN: Error=' + JSON.stringify(e));
+            setResult(e, true);
+        } finally {
+            document.querySelector('body').classList.remove('scanning');
+        }
+    });
+
+    document.querySelector('#stop-scan').addEventListener('click', async () => {
+        try {
+            Barcode.cancel();
+        } catch (e) {
+            console.error(e);
         }
     });
 

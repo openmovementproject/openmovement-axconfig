@@ -26,7 +26,7 @@
 <body>
 <div class="main">
   <header>
-    <h1>AX Configure <span class="version">beta-2021-03-31</span></h1>
+    <h1>AX Configure <span class="version">beta-2021-03-31b</span></h1>
     <div id="warnings"><ul>
       <noscript>⚠️ Scripting not enabled.</noscript>
     </div>
@@ -45,7 +45,15 @@
       <div class="incomplete">
         <fieldset>
           <legend>Configuration</legend>
-          <div><label accesskey="C" for="code">Code: </label><input id="code" type="text" placeholder="..."></div>
+          <div id="interactive" class="viewport"></div>
+          <div>
+            <label accesskey="C" for="code">Code: </label>
+            <input id="code" type="text" placeholder="...">
+            <div class="scan-controls">
+              <button class="button" type="button" id="start-scan">║│║&nbsp;Scan</button>
+              <button class="button" type="button" id="stop-scan">×&nbsp;Cancel</button>
+            </div>
+          </div>
           <details id="details" open>
             <summary>Details</summary>
             <div><label for="session">Session ID: </label><input id="session" type="number" placeholder="(none)"></div>
