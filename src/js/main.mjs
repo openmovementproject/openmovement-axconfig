@@ -226,6 +226,12 @@ function parametersChanged(params = globalParams) {
     if (typeof params.autosubmit !== 'undefined') autoSubmit = true;
     if (typeof params.noautosubmit !== 'undefined') autoSubmit = false;
     keyInput.setAutoSubmit(autoSubmit);
+
+    let title = null;
+    if (typeof params.title !== 'undefined') title = params.title;
+    if (!title) title = 'AX Configure';
+    document.querySelector('title').innerText = title;
+    document.querySelector('#title').innerText = title;
 }
 
 

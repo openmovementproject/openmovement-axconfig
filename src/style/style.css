@@ -187,12 +187,8 @@ summary::after {
 	content: "...";	
 }
 
-.version {
-	font-size: small;
-	color: #777;
-}
-
 footer {
+	color: #777;
 	margin-top: 1em;
 }
 
@@ -205,6 +201,12 @@ footer div {
 footer a {
 	color: #777;
 	text-decoration: none;
+}
+
+.version {
+	color: #777;
+	font-size: small;
+	white-space: nowrap;
 }
 
 footer a:hover, footer a:active {

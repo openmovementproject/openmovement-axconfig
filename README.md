@@ -38,6 +38,7 @@ Although not currently used by the configuration tool, an additional approach is
 
 Options can be added to the address by appending a hash (`#`) then `key=value` pairs separated with an ampersand (`&`).  In special circumstances, you can place options after a question mark (`?`), but changing these must be done online as this will cause the page to be reloaded -- an advantage of this is that this URL can be stored to a home screen shortcut while keeping the custom options.  The options are:
 
+* `title=AX+Configure` - set the page and tab title (e.g. to make the configuration/protocol clear; use "form URL-encoded" to escape special characters).
 * `focus` - immediately focus the *Code* input box for entry.
 * `nodetails` - hide detailed settings by default.
 * `readonly` - do not allow editing of the detailed settings.
@@ -48,7 +49,7 @@ Options can be added to the address by appending a hash (`#`) then `key=value` p
 * `gyro=0` - gyro sensitivity (*dps*, default `0`=none, allowed `250|500|1000|2000`)
 * `start=0` - delay until start from current time (hours, default `0`); or an exact start time (`YYYY-MM-DDThh:mm:ss`)
 * `stop=168` - duration of recording (hours, default 168); or an exact stop time (`YYYY-MM-DDThh:mm:ss`)
-* `metadata=` - metadata to add to the recording (use URL-encoded format which will need double-escaping in a URL; subject code `_sc` will be added from the `config` value)
+* `metadata=` - metadata to add to the recording (use URL-encoded format which will need double-escaping in a URL; a subject code `_sc` will also be added from the `config` value)
 * `minbattery=80` - minimum battery percentage at configuration time (configuration will fail unless the device is at this level, default none).
 * `noscan` - Disable camera-based barcode scanning button.
 * `readers=code_128` - Specify which camera-based barcode scanning decoders are enabled (default, `code_128`); a comma-separated list (only enable the specific ones you need to prevent problems with simpler codes), options: `code_128,ean,ean_8,code_39,code_39_vin,codabar,upc,upc_e,i2of5,2of5,code_93`
