@@ -47,8 +47,8 @@ Options can be added to the address by appending a hash (`#`) then `key=value` p
 * `rate=100` - sensor rate (Hz, default `100`, allowed `12.5|25|50|100|200|400|800|1600|3200`)
 * `range=8` - sensor range (*g*, default `8`, allowed `2|4|8|16`)
 * `gyro=0` - gyro sensitivity (*dps*, default `0`=none, allowed `250|500|1000|2000`)
-* `start=0` - delay until start from current time (hours, default `0`); or an exact start time (`YYYY-MM-DDThh:mm:ss`)
-* `stop=168` - duration of recording (hours, default 168); or an exact stop time (`YYYY-MM-DDThh:mm:ss`)
+* `start=0` - delay until start from current time (hours, default `0`); or an exact start time (`YYYY-MM-DDThh:mm:ss`; add a `Z` suffix to use UTC, otherwise in local time). Negative values are treated as hours after the previous midnight in local time.  For example, `-20`=8pm today's evening; `-24`=midnight tonight; `-32`=8am tomorrow morning.
+* `stop=168` - duration of recording (hours, default 168); or an exact stop time (`YYYY-MM-DDThh:mm:ss`; add a `Z` suffix to use UTC, otherwise in local time).
 * `metadata=` - metadata to add to the recording (use URL-encoded format which will need double-escaping in a URL; a subject code `_sc` will also be added from the `config` value)
 * `minbattery=80` - minimum battery percentage at configuration time (configuration will fail unless the device is at this level, default none).
 * `noscan` - Disable camera-based barcode scanning button.

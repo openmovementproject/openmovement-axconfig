@@ -244,7 +244,7 @@ const updateForm = (config) => {
 
     let start = parseDate(config.start);
     if (!start) {
-        document.querySelector('#delay').value = (!config.start && config.start !== 0) ? '' : parseFloat(config.start);
+        document.querySelector('#delay').value = (!config.start && config.start !== 0) ? '' : config.start;
         delayChanged();
     } else {
         document.querySelector('#start').value = localTimeString(start, 'm') || '';
@@ -414,7 +414,15 @@ const parseDate = (time) => {
     }
     if (/\d\d\d\d-\d\d-\d\d[T ]\d\d:\d\d:\d\d(?:\.\d\d\d)?Z?/.test(time)) {
         try {
-            return new Date(time);
+            let date;
+            if (time[time.length - 1] == 'Z') {
+                date = new Date(time);
+            } else {
+                const dateParts = time.split(/\D/).map(part => parseInt(part));
+                dateParts[1] = dateParts[1] - 1; // month
+                date = new Date(...dateParts);
+            }
+            return date;
         } catch (e) {
             console.log('ERROR: Problem parsing date: ' + time);
         }
@@ -453,7 +461,16 @@ const delayChanged = (delayValue = null) => {
     const delay = document.querySelector('#delay').value;
     if (delay.trim() !== '') {
         const now = new Date();
-        const start = new Date(now.getTime() + parseFloat(delay) * 60 * 60 * 1000);
+        const milliseconds = parseFloat(delay) * 60 * 60 * 1000;
+        let start;
+        if (milliseconds >= 0) {
+            // Positive: Time from now
+            start = new Date(now.getTime() + milliseconds);
+        } else {
+            // Negative: Local time of the previous midnight
+            const midnight = new Date((new Date(now)).setHours(0,0,0,0))
+            start = new Date(midnight.getTime() + -milliseconds);
+        }
         const elem = document.querySelector('#start');
         const newValue = localTimeString(start, 'm');
 //console.log("DELAY CHANGED?: " + parseFloat(delay) + " -> " + newValue);
