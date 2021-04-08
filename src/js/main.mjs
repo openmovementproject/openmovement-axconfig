@@ -697,6 +697,22 @@ const reconfigure = (clear, focus) => {
     codeChanged(document.querySelector('#code').value);
 }
 
+const doCancelScan = async () => {
+    try {
+        console.log('BARCODE: Cancel: Awaiting...')
+        await Barcode.cancel();
+        // console.log('BARCODE: Cancel: ...awaited')
+    } catch (e) {
+        console.error('BARCODE: Error during cancellation: ' + e);
+    }
+}
+
+const cancelScan = () => {
+    // console.log('BARCODE: Cancel: Trigger')
+    doCancelScan();
+    // console.log('BARCODE: Cancel: End of trigger')
+}
+
 let isConfiguring = false;
 const submit = async () => {
     //const code = document.querySelector(codeInput).value;
@@ -709,11 +725,7 @@ const submit = async () => {
         isConfiguring = true;
 
         // Cancel any scan in progress
-        try {
-            Barcode.cancel();
-        } catch (e) {
-            console.error(e);
-        }
+        cancelScan();
 
         document.querySelector('#configure').setAttribute('disabled', 'true');
         document.querySelector('#start-scan').setAttribute('disabled', 'true');
@@ -913,13 +925,7 @@ window.addEventListener('DOMContentLoaded', async (event) => {
         }
     });
 
-    document.querySelector('#stop-scan').addEventListener('click', async () => {
-        try {
-            await Barcode.cancel();
-        } catch (e) {
-            console.error(e);
-        }
-    });
+    document.querySelector('#stop-scan').addEventListener('click', cancelScan);
 
     // Call again now the DOM is loaded
     parametersChanged();

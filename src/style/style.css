@@ -262,13 +262,19 @@ body.scanning .scan-controls #stop-scan { display: inline; }
 body.scanning #interactive.viewport {
 	height: 480px;
 }
-#interactive.viewport > canvas, #interactive.viewport > video {
+
+#interactive.viewport > video {
     max-width: 100%;
     width: 100%;
+	z-index: -2;
 }
-canvas.drawing, canvas.drawingBuffer {
+
+#interactive.viewport > canvas.drawingBuffer {
     position: absolute;
     left: 0;
     top: 0;
-}
+	z-index: -1;
+	pointer-events: none;
 
+	display: none; /* not used */
+}

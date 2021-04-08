@@ -5,6 +5,12 @@
 
 import Quagga from './quagga.min.js';
 
+/*
+function sleep(timeMs) {
+    return new Promise((resolve) => setTimeout(resolve, timeMs));
+}
+*/
+
 export default class Barcode {
 
     constructor() {
@@ -12,7 +18,6 @@ export default class Barcode {
     }
    
     async init(initOptions) {
-        await this.stop();
         this.target = initOptions.inputStream.target;
         await new Promise((resolve, reject) => {
             Quagga.init(initOptions, (err) => {
@@ -29,8 +34,10 @@ export default class Barcode {
     }
 
     async start() {
+        // console.log('BARCODE: start()')
         await this.stop();
 
+        // console.log('BARCODE: do start...')
         Quagga.start();
 
         this.callbackDetected = this.detected.bind(this);
@@ -43,6 +50,7 @@ export default class Barcode {
         }
 
         this.started = true;
+        // console.log('BARCODE: ...started')
     }
 
     detected(data) {
@@ -67,27 +75,41 @@ export default class Barcode {
     }
 
     async stop() {
-        if (this.started) {
-            await Quagga.stop();
-            this.started = false;
-        }
+        // console.log('BARCODE: stop(): requested...')
 
         if (this.callbackDetected) {
+            // console.log('BARCODE: stop(): Removing detected callback...')
             Quagga.offDetected(this.callbackDetected);
             this.callbackDetected = null;
         }
 
         if (this.callbackProcessed) {
+            // console.log('BARCODE: stop(): Removing processed callback...')
             Quagga.offProcessed(this.callbackProcessed);
             this.callbackProcessed = null;
         }
-    
-        this.lastResult = null;
-        if (this.promiseScanCancelResolve) {
-            this.promiseScanCancelResolve(this.lastResult);
+
+        if (this.started) {
+            // console.log('BARCODE: stop(): Stopping scan...')
+            await Quagga.stop();
+            this.started = false;
+            // console.log('BARCODE: stop(): ...scan stopped')
+        } else {
+            // console.log('BARCODE: stop(): ...Scan was not started.')
         }
+    
+        // Move to local in case stop() is re-entrant
+        const localPromiseScanResolve = this.promiseScanCancelResolve;
+        this.lastResult = null;
         this.promiseScanCancelResolve = null;
         this.promiseScanCancelReject = null;
+
+        if (localPromiseScanResolve) {
+            // console.log('BARCODE: stop(): resolving scan promise...')
+            localPromiseScanResolve(this.lastResult);
+            // console.log('BARCODE: stop(): ...resolved')
+        }
+        // else console.log('BARCODE: stop(): no promise to resolve')
     }
 
     async waitForScanOrCancel() {
@@ -102,9 +124,11 @@ export default class Barcode {
 Barcode.instance = null;
 
 Barcode.cancel = async () => {
+    // console.log('BARCODE: Cancel requested...')
     if (Barcode.instance) {
         await Barcode.instance.stop();
     }
+    // else console.log('BARCODE: ...no instance found')
 }
 
 Barcode.scan = async (options) => {
@@ -173,13 +197,19 @@ Barcode.scan = async (options) => {
 
     let result = null;
     try {
+        // console.log('BARCODE: initializing');
         await Barcode.instance.init(initOptions);
+        // console.log('BARCODE: starting');
         await Barcode.instance.start();
+        // console.log('BARCODE: awaiting scan result (or cancellation)...');
         result = await Barcode.instance.waitForScanOrCancel();
+        // console.log('BARCODE: ...finished awaiting scan result (or cancellation)');
     } finally {
+        // console.log('BARCODE: create/wait block finished');
         await Barcode.instance.stop();
         document.querySelector(elementSelector).innerHTML = '';
     }
+    // console.log('BARCODE: scan function complete');
 
     return result;
 }
