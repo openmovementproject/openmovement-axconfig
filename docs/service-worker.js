@@ -58,4 +58,4 @@ self.addEventListener('activate', function (event) {
   );
 });
 
-const cacheName = 'v' /* STRING TO BE COMPLETED AT BUILD TIME */ + '20210408162449562';
+const cacheName = 'v' /* STRING TO BE COMPLETED AT BUILD TIME */ + '20210418113807492';
