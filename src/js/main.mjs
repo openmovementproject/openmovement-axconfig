@@ -615,8 +615,10 @@ const codeChanged = (code) => {
 };
 
 const configMismatches = (desired, actual) => {
+    const ignoreList = ['minbattery'];
     const mismatches = [];
     for (let key of Object.keys(desired)) {
+        if (ignoreList.includes(key)) continue;
         if (!key in actual) {
             console.log(`ERROR: Configuration key not found: ${key}`);
             mismatches.push([{[key]: desired[key]}, null]);
