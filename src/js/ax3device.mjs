@@ -362,11 +362,14 @@ export default class Ax3Device {
     }    
 
     async getConfigOptions() {
-        // TODO: Support AX6 (based on USB serial number)
-        return {
-            accelRate: [ 6.25, 12.5, 25, 50, 100, 200, 400, 800, 1600, 3200 ],
-            accelRange: [ 2, 4, 8, 16 ],
-        };
+        const options = {};
+        options.accelRate = [ 6.25, 12.5, 25, 50, 100, 200, 400, 800, 1600, 3200 ];
+        options.accelRange = [ 2, 4, 8, 16 ];
+        // Only works after updateStatus() / getId() called
+        if (this.hasGyro) {
+            options.gyroRange = [ 0, 250, 500, 1000, 2000 ];
+        }
+        return options;
     }
 
     async getId() {
@@ -567,8 +570,8 @@ export default class Ax3Device {
         if (parts[0] != value) {
             throw `RATE value unexpected: was ${parts[0]}, expected ${value}`;
         }
-        if (parts[1] != rate) {
-            throw `RATE frequency unexpected: was ${parts[1]}, expected ${rate}`;
+        if (parts[1] != Math.floor(rate)) {
+            throw `RATE frequency unexpected: was ${parts[1]}, expected ${Math.floor(rate)}`;
         }
         if (gyroRange && parts[2] != gyroRange) {
             throw `RATE gyro range unexpected: was ${parts[2]}, expected ${gyroRange}`;
