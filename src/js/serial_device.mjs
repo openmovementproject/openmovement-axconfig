@@ -62,8 +62,12 @@ console.log('<<< [' + this.buffer.length + '] ' + value);
             if (this.openFlag) { throw "Port already open"; }
 
             const options = {
-                baudrate: 9600,
+                baudRate: 9600,
             }
+
+            // TODO: Remove this backwards-compatible fix for previous case of 'baudRate': 'baudrate' before Chrome 86
+            options.baudrate = options.baudRate;
+
             await this.port.open(options);
 
             this.encoder = new TextEncoderStream();
