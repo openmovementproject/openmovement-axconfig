@@ -22,7 +22,7 @@ To configure a device:
 
 ## How it communicates
 
-The AX devices are a *Composite USB Device* made up of a *USB Mass Storage Device Class* (to serve the data file, like a standard USB drive), and a *USB Communications Device Class (CDC)* (a serial device).  To configure the devices the tool must communicate with the CDC device from the web page. 
+The AX devices are a *Composite USB Device* made up of a *USB Mass Storage Device Class* (to serve the data file, like a standard USB drive), and a *USB Communications Device Class (CDC)* (a serial device).  See [AX Device - Technical Documentation](https://github.com/digitalinteraction/openmovement/blob/master/Docs/ax3/ax3-technical.md) for more information.  To configure the devices the tool must communicate with the CDC device from the web page. 
 
 On some platforms (e.g. Mac and on some Android devices), the CDC connection is available as a standard USB interface and communication is possible on supported browsers via *WebUSB*.  (Additional debugging for this may be available in your browser at: `chrome://device-log` and `chrome://usb-internals`.)
 
