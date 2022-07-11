@@ -37,9 +37,32 @@
             -ms-user-select: none;
             -webkit-user-select: none;
         }
+        #controls {
+            position: absolute;
+            top: 0;
+            width: 100%;
+            text-align: center;
+            display: none;
+        }
+        #controls.visible {
+            display: block;
+        }
+        #controls button {
+            color: grey;
+            border: 1px dotted grey;
+            background-color: transparent;
+            font-size: min(max(3vw, 12pt), 24pt);
+            margin-left: 1em;
+            margin-right: 1em;
+            margin-top: 0.2em;
+        }
     </style>
 </head>
 <body>
+    <div id="controls">
+        <button id="save" title="Download Log">⤓</button>
+        <button id="clear" title="Clear Log">✕</button>
+    </div>
     <output id="output"></output>
     <script>
         let activeInterval = null
@@ -51,8 +74,19 @@
         const vibrateTime = 50
         const updateInterval = 10
         let trackedInput = []
-        const log = {}
+        const log = []
 
+        document.querySelector('#save').addEventListener('click', () => {
+            downloadLog()
+        })
+
+        document.querySelector('#clear').addEventListener('click', () => {
+            if (window.confirm('Really wipe event log clear?')) {
+                log.splice(0)
+                activeElapsed = ''
+                document.querySelector('#controls').classList.toggle('visible', false)
+            }
+        })
 
         function downloadText(filename, textType, content) {
             const element = document.createElement('a')
@@ -68,10 +102,14 @@
             if (Object.keys(log).length <= 0) return
             const lines = []
             for (let entry of log) {
-                lines.push('' + entry.label + ',' + entry.start + ',' + entry.end)
+                lines.push('' 
+                    + entry.label + ',' 
+                    + (new Date(entry.start)).toISOString().replace('T', ' ').replace('Z', '') + ',' 
+                    + (new Date(entry.end)).toISOString().replace('T', ' ').replace('Z', '') + ',' 
+                    + ((entry.end - entry.start) / 1000).toFixed(3))
             }
             const content = lines.join('\n')
-            downloadText('log-' + (new Date()).toISOString().replace('T', '-').replace('Z','').replace(':','-').replace(':','-').replace('.','-') + '.csv', csv, content)
+            downloadText('log-' + (new Date()).toISOString().replace('T', '-').replace('Z','').replace(':','-').replace(':','-').replace('.','-') + '.csv', 'csv', content)
         }
 
         function inputDown(id) {
@@ -96,8 +134,8 @@
             }
         }
         
-        function update() {
-            const now = Date.now()
+        function update(now) {
+            if (!now) now = Date.now()
             if (activeInterval) {
                 if (!vibrateExpires || vibrateExpires - now < 2 * updateInterval) {
                     if (window.navigator.vibrate && window.navigator.vibrate(100)) {
@@ -121,6 +159,7 @@
             }
             // (Output in clock timer instead)
             //document.getElementById('output').innerText = activeElapsed
+            return now;
         }
 
         function activate(active) {
@@ -128,7 +167,7 @@
             if (!activeInterval && active !== null) {
                 activeId = active
                 if (activeId.startsWith('K:')) {
-                    activeLabel = activeId.slice(2).toUpperCase()
+                    activeLabel = activeId.slice(2).trim().toUpperCase()
                 } else if (activeId.startsWith('P:')) {
                     activeLabel = ''
                 } else {
@@ -136,20 +175,22 @@
                 }
                 activeStart = now
                 activeInterval = true
-                update()
+                update(now)
                 // (Updated from clock timer instead)
                 //activeInterval = setInterval(update, 10)
             } else if (activeInterval && !active) {
                 log.push({
                     label: activeLabel,
-                    start: (new Date(activeStart)).toISOString().replace('T', ' ').replace('Z', ''),
-                    end: (new Date(now)).toISOString().replace('T', ' ').replace('Z', ''),
+                    start: activeStart,
+                    end: now,
                 })
+                document.querySelector('#save').innerText = '' + log.length + ' ⤓'
+                document.querySelector('#controls').classList.toggle('visible', true)
                 activeId = null
                 activeLabel = ''
                 if (activeInterval !== true) clearInterval(activeInterval)
                 activeInterval = null
-                update()
+                update(now)
             }
         }
 
@@ -180,6 +221,11 @@
             }, true)
 
             document.addEventListener('keydown', (e) => {
+                if (e.keyCode == 27 && Object.keys(log).length) {
+                    e.preventDefault()
+                    downloadLog();
+                    return
+                }
                 if (e.key.length !== 1) return;
                 e.preventDefault()
                 inputDown('K:' + e.key)
