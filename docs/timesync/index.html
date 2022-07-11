@@ -43,11 +43,58 @@
     <output id="output"></output>
     <script>
         let activeInterval = null
+        let activeId = null
+        let activeLabel = ''
         let activeStart = null
         let activeElapsed = ''
         let vibrateExpires = null
         const vibrateTime = 50
         const updateInterval = 10
+        let trackedInput = []
+        const log = {}
+
+
+        function downloadText(filename, textType, content) {
+            const element = document.createElement('a')
+            element.setAttribute('href', 'data:text/' + textType + ';charset=utf-8,' + encodeURIComponent(content))
+            element.setAttribute('download', filename);
+            element.style.display = 'none';
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+        }
+
+        function downloadLog() {
+            if (Object.keys(log).length <= 0) return
+            const lines = []
+            for (let entry of log) {
+                lines.push('' + entry.label + ',' + entry.start + ',' + entry.end)
+            }
+            const content = lines.join('\n')
+            downloadText('log-' + (new Date()).toISOString().replace('T', '-').replace('Z','').replace(':','-').replace(':','-').replace('.','-') + '.csv', csv, content)
+        }
+
+        function inputDown(id) {
+            if (!trackedInput.includes(id)) {
+                trackedInput.push(id)
+                if (trackedInput.length == 1) {
+                    activate(id)
+                }
+            }
+        }
+
+        function inputUp(id) {
+            const index = trackedInput.indexOf(id)
+            if (index < 0) return
+            if (!trackedInput.includes(id)) trackedInput.push(id)
+            trackedInput.splice(index, 1)
+            if (index == 0) {
+                activate(null)
+                if (trackedInput.length > 0) {
+                    activate(trackedInput[0])
+                }
+            }
+        }
         
         function update() {
             const now = Date.now()
@@ -64,7 +111,7 @@
                     }
                 }
                 const elapsed = now - activeStart
-                activeElapsed = '' + (elapsed / 1000).toFixed(3) + ' s'
+                activeElapsed = activeLabel + ' ' + (elapsed / 1000).toFixed(3) + ' s'
             } else {
                 if (window.navigator.vibrate) window.navigator.vibrate(0)
                 vibrateExpires = null
@@ -77,13 +124,29 @@
         }
 
         function activate(active) {
-            if (!activeInterval && active) {
-                activeStart = Date.now()
+            const now = Date.now()
+            if (!activeInterval && active !== null) {
+                activeId = active
+                if (activeId.startsWith('K:')) {
+                    activeLabel = activeId.slice(2).toUpperCase()
+                } else if (activeId.startsWith('P:')) {
+                    activeLabel = ''
+                } else {
+                    activeLabel = '?'
+                }
+                activeStart = now
                 activeInterval = true
                 update()
                 // (Updated from clock timer instead)
                 //activeInterval = setInterval(update, 10)
             } else if (activeInterval && !active) {
+                log.push({
+                    label: activeLabel,
+                    start: (new Date(activeStart)).toISOString().replace('T', ' ').replace('Z', ''),
+                    end: (new Date(now)).toISOString().replace('T', ' ').replace('Z', ''),
+                })
+                activeId = null
+                activeLabel = ''
                 if (activeInterval !== true) clearInterval(activeInterval)
                 activeInterval = null
                 update()
@@ -91,23 +154,41 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            document.addEventListener('mousedown', (e) => {
+
+            window.addEventListener('blur', (e) => {
+                if (trackedInput.length > 0) {
+                    trackedInput.splice(0)
+                    activate(null)
+                }
+            })
+
+            document.addEventListener('pointerdown', (e) => {
+                if (e.pointerType == 'mouse' && e.button === 2) return;
+                document.body.setPointerCapture(e.pointerId)
+                inputDown('P:' + e.pointerId)
+            }, true)
+
+            document.addEventListener('pointerup', (e) => {
+                if (e.pointerType == 'mouse' && e.button === 2) return;
                 e.preventDefault()
-                activate(true)
+                document.body.releasePointerCapture(e.pointerId)
+                inputUp('P:' + e.pointerId)
             }, true)
-            document.addEventListener('mouseup', (e) => {
+
+            document.addEventListener('lostpointercapture', (e) => {
+                inputUp(null)
+            }, true)
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key.length !== 1) return;
                 e.preventDefault()
-                activate(false)
+                inputDown('K:' + e.key)
             }, true)
-            
-            document.addEventListener('touchstart', (e) => {
-                activate(true)
-            }, true)
-            document.addEventListener('touchend', (e) => {
-                activate(false)
-            }, true)
-            document.addEventListener('touchcancel', (e) => {
-                activate(false)
+
+            document.addEventListener('keyup', (e) => {
+                if (e.key.length !== 1) return;
+                e.preventDefault()
+                inputUp('K:' + e.key)
             }, true)
 
             document.addEventListener('visibilitychange', () => {

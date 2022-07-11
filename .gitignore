@@ -1,3 +1,5 @@
+.DS_Store
+/.parcel-cache
 /csr.pem
 /key.pem
 /server.crt
