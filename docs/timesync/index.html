@@ -71,7 +71,7 @@
         let activeStart = null
         let activeElapsed = ''
         let vibrateExpires = null
-        const vibrateTime = 50
+        const vibrateTime = 200
         const updateInterval = 10
         let trackedInput = []
         const log = []
@@ -143,7 +143,7 @@
             if (!now) now = Date.now()
             if (activeInterval) {
                 if (!vibrateExpires || vibrateExpires - now < 2 * updateInterval) {
-                    if (window.navigator.vibrate && window.navigator.vibrate(100)) {
+                    if (window.navigator.vibrate && window.navigator.vibrate(vibrateTime)) {
                         vibrateExpires = now + vibrateTime
                         document.body.classList.remove('error')
                         document.body.classList.add('active')
