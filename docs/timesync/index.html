@@ -122,6 +122,11 @@
         }
 
         function inputUp(id) {
+            if (id === null) {
+                trackedInput.splice(0)
+                activate(null)
+                return
+            }
             const index = trackedInput.indexOf(id)
             if (index < 0) return
             if (!trackedInput.includes(id)) trackedInput.push(id)
