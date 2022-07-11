@@ -6,3 +6,4 @@
 /dist
 /.cache
 /node_modules
+/_local
