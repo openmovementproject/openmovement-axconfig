@@ -103,7 +103,7 @@
             const lines = []
             for (let entry of log) {
                 lines.push('' 
-                    + entry.label + ',' 
+                    + (entry.label == '' ? '*' : entry.label) + ',' 
                     + (new Date(entry.start)).toISOString().replace('T', ' ').replace('Z', '') + ',' 
                     + (new Date(entry.end)).toISOString().replace('T', ' ').replace('Z', '') + ',' 
                     + ((entry.end - entry.start) / 1000).toFixed(3))
