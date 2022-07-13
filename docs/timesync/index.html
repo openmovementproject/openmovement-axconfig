@@ -11,11 +11,12 @@
             color: white;
             text-align: center;
             overflow: hidden;
-            
+            margin: 0;
             user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;
             -webkit-user-select: none;
+            touch-action: none;
         }
         body.active {
             background-color: white;
@@ -36,6 +37,7 @@
             -moz-user-select: none;
             -ms-user-select: none;
             -webkit-user-select: none;
+            pointer-events: none;
         }
         #controls {
             position: absolute;
@@ -43,6 +45,7 @@
             width: 100%;
             text-align: center;
             display: none;
+            pointer-events: none;
         }
         #controls.visible {
             display: block;
@@ -52,9 +55,19 @@
             border: 1px dotted grey;
             background-color: transparent;
             font-size: min(max(3vw, 12pt), 24pt);
+            line-height: 1.5;
             margin-left: 1em;
             margin-right: 1em;
             margin-top: 0.2em;
+            border-radius: 5px;
+            pointer-events: all;
+            cursor: pointer;
+        }
+        #controls button:hover {
+            border: 1px solid white;
+        }
+        #controls button:active {
+            color: white;
         }
     </style>
 </head>
@@ -76,8 +89,24 @@
         let trackedInput = []
         const log = []
 
+        document.querySelector('#save').addEventListener('pointerdown', (e) => {
+            e.stopPropagation()
+        })
+
+        document.querySelector('#save').addEventListener('keydown', (e) => {
+            e.stopPropagation()
+        })
+
         document.querySelector('#save').addEventListener('click', () => {
             downloadLog()
+        })
+
+        document.querySelector('#clear').addEventListener('pointerdown', (e) => {
+            e.stopPropagation()
+        })
+
+        document.querySelector('#clear').addEventListener('keydown', (e) => {
+            e.stopPropagation()
         })
 
         document.querySelector('#clear').addEventListener('click', () => {
@@ -91,11 +120,11 @@
         function downloadText(filename, textType, content) {
             const element = document.createElement('a')
             element.setAttribute('href', 'data:text/' + textType + ';charset=utf-8,' + encodeURIComponent(content))
-            element.setAttribute('download', filename);
-            element.style.display = 'none';
-            document.body.appendChild(element);
-            element.click();
-            document.body.removeChild(element);
+            element.setAttribute('download', filename)
+            element.style.display = 'none'
+            document.body.appendChild(element)
+            element.click()
+            document.body.removeChild(element)
         }
 
         function downloadLog() {
@@ -164,7 +193,7 @@
             }
             // (Output in clock timer instead)
             //document.getElementById('output').innerText = activeElapsed
-            return now;
+            return now
         }
 
         function activate(active) {
@@ -208,36 +237,43 @@
                 }
             })
 
+            //function pointermove(e) {
+            //    e.preventDefault()
+            //}
+
             document.addEventListener('pointerdown', (e) => {
-                if (e.pointerType == 'mouse' && e.button === 2) return;
+                if (e.pointerType == 'mouse' && e.button === 2) return
+                e.preventDefault()
+                //document.addEventListener('pointermove', pointermove)
                 document.body.setPointerCapture(e.pointerId)
                 inputDown('P:' + e.pointerId)
-            }, true)
+            })
 
             document.addEventListener('pointerup', (e) => {
-                if (e.pointerType == 'mouse' && e.button === 2) return;
+                if (e.pointerType == 'mouse' && e.button === 2) return
+                //document.removeEventListener('pointermove', pointermove)
                 e.preventDefault()
                 document.body.releasePointerCapture(e.pointerId)
                 inputUp('P:' + e.pointerId)
-            }, true)
+            })
 
             document.addEventListener('lostpointercapture', (e) => {
                 inputUp(null)
-            }, true)
+            })
 
             document.addEventListener('keydown', (e) => {
                 if (e.keyCode == 27 && Object.keys(log).length) {
                     e.preventDefault()
-                    downloadLog();
+                    downloadLog()
                     return
                 }
-                if (e.key.length !== 1) return;
+                if (e.key.length !== 1) return
                 e.preventDefault()
                 inputDown('K:' + e.key)
             }, true)
 
             document.addEventListener('keyup', (e) => {
-                if (e.key.length !== 1) return;
+                if (e.key.length !== 1) return
                 e.preventDefault()
                 inputUp('K:' + e.key)
             }, true)
