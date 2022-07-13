@@ -1,6 +1,9 @@
 {
     "search.exclude": {
-        "**/docs": true
+        "/docs/*.html": true,
+        "/docs/*.js": true,
+        "/docs/*t.webmanifest": true,
+        "/docs/*.appcache": true
     },
     "cSpell.words": [
         "COMMS",
@@ -52,5 +55,6 @@
         "upsert",
         "webconfig",
         "webusb"
-    ]
+    ],
+    "cSpell.language": "en,en-GB,en-US,lorem"
 }
