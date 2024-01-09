@@ -944,6 +944,41 @@ export default class Ax3Device {
     }
 
 
+    async runDiagnostic() {
+        if (this.device.isBusy()) {
+            this.updateState(null, 'Device busy');
+            throw('ERROR: Device is busy');
+        }
+        try {
+            this.updateState('Running diagnostic...');
+
+            await this.tryAndRetry(() => this.open());
+
+            this.diagnostic = {};
+
+            // Existing info from status:
+            this.diagnostic.id = this.status.id; // .deviceType .deviceId .firmwareVersion
+            this.diagnostic.battery = this.status.battery; // .voltage .percent .charging .time
+            this.diagnostic.start = this.status.start;
+            this.diagnostic.stop = this.status.stop;
+
+            this.recalculateRecordingStatus();  // updateState
+
+            return this.diagnostic;
+        } catch (e) {
+            if (e.error) {
+                this.updateState(null, `Error running diagnostic: ${e.error}`);
+                console.log('ERROR: Problem during diagnostic: ' + e.error);
+            } else {
+                this.updateState(null, `Error running diagnostic: ${e}`);
+                console.log('ERROR: Problem during diagnostic: ' + e);
+            }
+            throw e;
+        } finally {
+            await this.close();
+        }
+    }
+
 }
 
 // USB

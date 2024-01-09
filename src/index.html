@@ -105,11 +105,22 @@
         </div>
       </div>
       <div class="connected">
-        <fieldset id="device-fieldset">
+        <fieldset class="device-fieldset">
           <legend>Device</legend>
-          <div><label for="device-id">Id: </label><output id="device-id">-</output></div>
-          <div><label for="battery">Battery: </label><meter id="battery-meter" min="0" max="100" low="30" high="85" optimum="100" value="0"></meter> <output id="battery">-</output></div>
-          <div><label for="state">State: </label><output id="state">-</output></div>
+          <span class="device-status">
+            <div><label for="device-id">Id: </label><output id="device-id">-</output></div>
+            <div><label for="battery">Battery: </label><meter id="battery-meter" min="0" max="100" low="30" high="85" optimum="100" value="0"></meter> <output id="battery">-</output></div>
+            <div><label for="state">State: </label><output id="state">-</output></div>
+          </span>
+          <div class="device-controls">
+            <button class="button" type="button" id="diagnostic" title="Run Diagnostic">&#x1F50D; Diagnostic</button>
+          </div>
+        </fieldset>
+        <fieldset class="diagnostic-fieldset">
+          <legend>Diagnostic Report</legend>
+          <button class="button" type="button" id="diagnostic-copy" title="Copy report to clipboard">&#x2398; Copy</button>
+          <button class="button" type="button" id="diagnostic-download" title="Download report">&#x21E9; Download</button>
+          <textarea id="diagnostic-text" readonly></textarea>
         </fieldset>
       </div>
 
@@ -127,8 +138,8 @@
     <div>
       <a href="https://github.com/digitalinteraction/openmovement-axconfig/blob/master/README.md" title="openmovement-axconfig project">ℹ️ Help</a>
       | <a id="reset" href="#">&#x21BA; Reset</a>
-      <span class="log-span">| <a id="log-download" href="">&#x25BE; Download Log</a> 
-        <span class="log-clear-span">| <a id="log-clear" href="">&#x239A; Clear Log</a></span>
+      <span class="log-span">| <a id="log-download" href="">&#x21E9; Download Config Log</a> 
+        <span class="log-clear-span">| <a id="log-clear" href="">&#x239A; Clear Config Log</a></span>
       </span>
       | <span class="version">v2021-07-06</span>
     </div>

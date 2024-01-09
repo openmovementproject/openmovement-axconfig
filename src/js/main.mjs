@@ -380,6 +380,8 @@ const updateStatus = () => {
 }
 
 const deviceChanged = async () => {
+    document.querySelector('.connected').classList.remove('diagnostic');
+
     currentDevice = deviceManager.getSingleDevice();
 
     if (!currentDevice) {
@@ -825,6 +827,42 @@ window.addEventListener('DOMContentLoaded', async (event) => {
         } catch (e) {
             setResult(e, true);
         }
+    });
+
+    document.querySelector('#diagnostic').addEventListener('click', async () => {
+        try {
+            if (currentDevice) {
+                const diagnostic = await currentDevice.runDiagnostic();
+                const diagnosticText = JSON.stringify(diagnostic, null, 4);
+                console.dir(diagnostic);
+                const diagnosticElement = document.querySelector('#diagnostic-text');
+                diagnosticElement.value = diagnosticText;
+                diagnosticElement.focus();
+                diagnosticElement.select();
+                diagnosticElement.scrollTo(0, 0);
+                document.querySelector('.connected').classList.add('diagnostic');
+            }
+        } catch (e) {
+            setResult(e, true);
+        }
+    });
+
+    document.querySelector('#diagnostic-copy').addEventListener('click', async () => {
+        const diagnosticElement = document.querySelector('#diagnostic-text');
+        if ('clipboard' in navigator) {
+            navigator.clipboard.writeText(diagnosticElement.value)
+        } else {
+            diagnosticElement.focus();
+            diagnosticElement.select();
+            diagnosticElement.scrollTo(0, 0);
+            document.execCommand('copy');
+        }
+    });
+
+    document.querySelector('#diagnostic-download').addEventListener('click', async () => {
+        const diagnosticElement = document.querySelector('#diagnostic-text');
+        const filename = 'diagnostic.txt';
+        download(filename, diagnosticElement.value, 'text/plain');
     });
 
     for (let input of ['#delay']) {

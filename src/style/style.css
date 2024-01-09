@@ -278,3 +278,30 @@ body.scanning #interactive.viewport {
 
 	display: none; /* not used */
 }
+
+/* Device Controls */
+.device-fieldset {
+	display: flex;
+}
+.device-fieldset .device-status {
+	display: block;
+	flex-grow: 1;
+}
+.device-fieldset .device-controls {
+	display: block;
+}
+
+.connected .diagnostic-fieldset {
+	display: none;
+}
+
+.connected.diagnostic .diagnostic-fieldset{
+	display: block;
+}
+
+.diagnostic-fieldset textarea {
+	width: 100%;
+	height: 10em;
+	border: none;
+	background: transparent;
+}

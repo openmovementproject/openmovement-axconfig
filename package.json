@@ -8,7 +8,7 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "parcel src/index.html",
+    "dev": "parcel dev --host localhost --port 1234 src/index.html",
     "build": "parcel build src/index.html --public-url ./ --out-dir docs && del-cli docs/*.map docs/*.js docs/*.mjs docs/*.css docs/icon*.*.png docs/manifest.webmanifest && cpy src/cache.appcache src/manifest.webmanifest src/service-worker.js icon*.png docs && node -e \"console.log('# version ' + (new Date()).toISOString());\" >> docs/cache.appcache && node -e \"console.log(' + \\'' + (new Date()).toISOString().replace(/[^0-9]/g,'') + '\\';');\" >> docs/service-worker.js"
   },
   "repository": {
