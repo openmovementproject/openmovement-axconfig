@@ -380,7 +380,8 @@ const updateStatus = () => {
 }
 
 const deviceChanged = async () => {
-    document.querySelector('.connected').classList.remove('diagnostic');
+    document.querySelector('body').classList.remove('diagnostics-open');
+    document.querySelector('#diagnostic-text').value = '';
 
     currentDevice = deviceManager.getSingleDevice();
 
@@ -788,6 +789,22 @@ const submit = async () => {
     }
 };
 
+let diagnosticLabel = 'unknown';
+let diagnosticTimestamp = new Date();
+function diagnosticResults(diagnostic, label) {
+    diagnosticLabel = label ? label : 'unknown';
+    diagnosticTimestamp = new Date();
+    document.querySelector('.diagnostic-fieldset legend').innerText = 'Diagnostic Report: ' + diagnosticLabel;
+    const diagnosticText = diagnostic ? JSON.stringify(diagnostic, null, 4) : '';
+    console.dir(diagnostic);
+    const diagnosticElement = document.querySelector('#diagnostic-text');
+    diagnosticElement.value = diagnosticText;
+    diagnosticElement.focus();
+    diagnosticElement.select();
+    diagnosticElement.scrollTo(0, 0);
+    document.querySelector('body').classList.add('diagnostics-open');
+}
+
 window.addEventListener('DOMContentLoaded', async (event) => {
     domLoaded = true;
 
@@ -829,18 +846,12 @@ window.addEventListener('DOMContentLoaded', async (event) => {
         }
     });
 
-    document.querySelector('#diagnostic').addEventListener('click', async () => {
+    document.querySelector('#run_diagnostic').addEventListener('click', async () => {
         try {
             if (currentDevice) {
                 const diagnostic = await currentDevice.runDiagnostic();
-                const diagnosticText = JSON.stringify(diagnostic, null, 4);
-                console.dir(diagnostic);
-                const diagnosticElement = document.querySelector('#diagnostic-text');
-                diagnosticElement.value = diagnosticText;
-                diagnosticElement.focus();
-                diagnosticElement.select();
-                diagnosticElement.scrollTo(0, 0);
-                document.querySelector('.connected').classList.add('diagnostic');
+                const label = (diagnostic && diagnostic.id && diagnostic.id.deviceId) ? diagnostic.id.deviceId : 'unknown';
+                diagnosticResults(diagnostic, label);
             }
         } catch (e) {
             setResult(e, true);
@@ -860,9 +871,10 @@ window.addEventListener('DOMContentLoaded', async (event) => {
     });
 
     document.querySelector('#diagnostic-download').addEventListener('click', async () => {
-        const diagnosticElement = document.querySelector('#diagnostic-text');
-        const filename = 'diagnostic.txt';
-        download(filename, diagnosticElement.value, 'text/plain');
+        const timestamp = diagnosticTimestamp.toISOString().replace(/[^0-9]/g, '').substring(0, 14);
+        const filename = 'diagnostic_' + timestamp + '_' + diagnosticLabel + '.txt';
+        const diagnosticData = document.querySelector('#diagnostic-text').value;
+        download(diagnosticLabel, diagnosticData, 'text/plain');
     });
 
     for (let input of ['#delay']) {

@@ -309,11 +309,11 @@ body.scanning #interactive.viewport {
 	display: block;
 }
 
-.connected .diagnostic-fieldset {
+body .diagnostics {
 	display: none;
 }
 
-.connected.diagnostic .diagnostic-fieldset{
+body.diagnostics-open .diagnostics {
 	display: block;
 }
 

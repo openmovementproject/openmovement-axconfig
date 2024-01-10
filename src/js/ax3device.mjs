@@ -1,4 +1,5 @@
 import { sleep, localTime, localTimeString } from './util.mjs';
+import { parseHeader } from './cwa_parse.mjs';
 
 /*
 {
@@ -699,10 +700,10 @@ export default class Ax3Device {
     }
 
     async readSector(sectorNumber) {
-        // "0123: 01 23 45 67  89 ab cd ef  01 23 45 67  89 ab cd ef  wxyzwxyzwxyzwxyz\r\n"
+        // "0123: 01 23 45 67  89 ab cd ef  01 23 45 67  89 ab cd ef  testtesttesttest\r\n"
         const bytesPerLine = 16;
         const sectorSize = 512;
-        const command = new Command(`\r\nREADL ${sectorNumber}\r\n`, 'OK', 10000);
+        const command = new Command(`\r\nREADL ${sectorNumber}\r\nECHO\r\n`, 'ECHO=', 10000);
         console.log('>>> ' + command.output);
         const result = await this.exec(command);
         const buffer = new DataView(new ArrayBuffer(sectorSize), 0);
@@ -710,6 +711,7 @@ export default class Ax3Device {
         for (let line of result.lines) {
             if (line.startsWith('READL=')) continue;
             if (line.startsWith('OK')) continue;
+            if (line.startsWith('ECHO=')) continue;
             line = line.trim();
             const offsetString = line.split(':', 1)[0];
             const offset = parseInt(offsetString, 16);
@@ -729,7 +731,8 @@ export default class Ax3Device {
             }
         }
         if (currentOffset != sectorSize) {
-            throw `Unexpected sector size ${currentOffset}, expected ${sectorSize}`;
+            console.dir(result.lines);
+            throw `Unexpected sector data of size ${currentOffset}, expected size ${sectorSize}, from ${result.lines.length} lines`;
         }
         // buffer.byteLength // buffer.buffer.byteLength
         return buffer;
@@ -1069,46 +1072,6 @@ export default class Ax3Device {
         }
     }
 
-    /*
-    >>> ID
-    ID=CWA,17,50,44439,1
-
-    >>> STATUS 3
-    FTL=0,0,106,2,0,0
-
-    >>> STATUS 5
-    RESTART=23
-
-    >>> STATUS 7
-    NANDID=2c:dc:90:95:56:00,4
-
-    >>> SAMPLE\r\nECHO
-    $BATT=706,4136,mV,91,0
-    $LDR=234,234
-    $TEMP=264,191,0.1dC
-    $TIME=2000/01/01,00:41:17.629
-    $ACCEL=9,-37,237
-    $GYRO=
-    ECHO=0
-
-    >>> HIBERNATE
-    HIBERNATE=2021/07/06,13:08:00
-
-    >>> STOP
-    STOP=2021/07/06,14:08:00
-
-    >>> MAXSAMPLES
-    MAXSAMPLES=0
-
-    >>> LOG
-    LOG,14,0x0204,2021/01/20,12:34:56,NOT_STARTED_AFTER_INTERVAL
-    ...
-    LOG,7,0x0209,2021/02/21,13:40:57,NOT_STARTED_WAIT_USB
-    ...
-    LOG,0,0x0209,2022/03/22,14:45:58,NOT_STARTED_WAIT_BATTERY
-
-    */
-
     async runDiagnostic() {
         if (this.device.isBusy()) {
             this.updateState(null, 'Device busy');
@@ -1120,6 +1083,7 @@ export default class Ax3Device {
             await this.tryAndRetry(() => this.open());
 
             this.diagnostic = {};
+            this.diagnostic.errors = [];
 
             // Existing info from status:
             this.diagnostic.id = this.status.id; // .deviceType .deviceId .firmwareVersion
@@ -1128,12 +1092,33 @@ export default class Ax3Device {
             this.diagnostic.stop = this.status.stop;
 
             // Additional information
-            this.diagnostic.rate = await this.getRate();
-            this.diagnostic.time = await this.getTime();
-            this.diagnostic.sessionId = await this.getSession();
-            this.diagnostic.maxSamples = await this.getMaxSamples();
-            this.diagnostic.status = await this.getStatus();
-            this.diagnostic.log = await this.getLog();
+            try {
+                this.diagnostic.rate = await this.getRate();
+                this.diagnostic.time = await this.getTime();
+                this.diagnostic.sessionId = await this.getSession();
+                this.diagnostic.maxSamples = await this.getMaxSamples();
+                this.diagnostic.status = await this.getStatus();
+                this.diagnostic.log = await this.getLog();
+            } catch (e) {
+                this.diagnostic.errors.push('Problem while getting additional information: ' + JSON.stringify(e));
+            }
+
+            // Read filesystem
+            try {
+                this.diagnostic.filesystem = await this.readFilesystem();
+            } catch (e) {
+                this.diagnostic.errors.push('Problem while getting filesystem information: ' + JSON.stringify(e));
+            }
+            
+            // Parse initial sector
+            if (this.diagnostic.filesystem && this.diagnostic.filesystem.dataLength > 0 && this.diagnostic.filesystem.dataFirstSectorContents) {
+                try {
+                    const headerData = this.diagnostic.filesystem.dataFirstSectorContents;
+                    this.diagnostic.header = parseHeader(headerData);
+                } catch (e) {
+                    this.diagnostic.errors.push('Problem while parsing data file information: ' + JSON.stringify(e));
+                }
+            }
 
             // Finish
             this.recalculateRecordingStatus();  // updateState
