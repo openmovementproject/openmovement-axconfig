@@ -12,10 +12,10 @@ export default class DeviceManager {
         this.serialDevices = {};
         this.warnings = [];
         if (location.protocol === 'file:') {
-            this.warnings.push('WARNING: Features may not work over the file: protocol (try via a web server).');
+            this.warnings.push('WARNING: Features may not work over the file: protocol (try via an HTTP web server).');
         }
-        if (location.protocol !== 'https:') {
-            this.warnings.push('WARNING: Features require secure HTTPS.');
+        if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1' && location.hostname !== '::1') {
+            this.warnings.push('WARNING: Features may require secure HTTPS on non-loopback connections.');
         }
         if (!navigator.usb && !navigator.serial) {
             this.warnings.push('WARNING: This browser configuration does not support device connection (WebUSB or Web Serial API).');

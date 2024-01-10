@@ -110,6 +110,24 @@ body.console #output {
 	top: 2px;
 }
 
+.secondary {
+	background-color: transparent;
+	border: 1px solid transparent;
+	border-radius: 5px;
+	display: inline-block;
+	cursor: pointer;
+	color: black;
+}
+
+.secondary:hover {
+	border: 1px solid black;
+}
+
+.secondary:active {
+	position: relative;
+	top: 2px;
+}
+	
 /*input[type="button"]*/
 input[type="button"]:disabled, input[type="submit"]:disabled, .button:disabled {
 	background: #dddddd;

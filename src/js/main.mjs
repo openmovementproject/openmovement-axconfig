@@ -526,12 +526,12 @@ const configFromForm = () => {
     };
 
     const notSpecified = [];
-    if (typeof config.session !== 'number' || isNaN(config.session)) notSpecified.push('no session ID');
-    if (typeof config.start !== 'object' || !config.start) notSpecified.push('no start time');
-    if (typeof config.stop !== 'object' || !config.stop) notSpecified.push('no stop time');
-    if (getDuration() <= 0) { notSpecified.push('no valid interval'); }
+    if (typeof config.session !== 'number' || isNaN(config.session)) notSpecified.push('session ID not specified');
+    if (typeof config.start !== 'object' || !config.start) notSpecified.push('start time not specified');
+    if (typeof config.stop !== 'object' || !config.stop) notSpecified.push('stop time not specified');
+    if (getDuration() <= 0) { notSpecified.push('start and stop times do not make a valid interval'); }
     if (notSpecified.length > 0) {
-        throw "Error: " + notSpecified.join(', ') + '.';
+        throw "Cannot configure: " + notSpecified.join(', ') + '.';
     }
     return config;
 }

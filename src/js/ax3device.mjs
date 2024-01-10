@@ -415,6 +415,17 @@ export default class Ax3Device {
         }
     }
 
+    async getTime() {
+        const command = new Command(`\r\nTIME\r\n`, '$TIME=', 2000);
+        console.log('>>> ' + command.output);
+        const result = await this.exec(command);
+        const response = result.lastLine();
+        console.log('<<< ' + response);
+        const returnTimeRaw = response.substring(response.indexOf('=') + 1);
+        const returnTime = this.parseDateTime(returnTimeRaw);
+        return returnTime;  // returnTime.toISOString()
+    }
+
     async setTime(newTime = null) {
         this.updateState('Configuring: Setting time');
         let time = newTime;
@@ -434,6 +445,17 @@ export default class Ax3Device {
         }
     }
 
+    async getSession() {
+        const command = new Command(`\r\nSESSION\r\n`, 'SESSION=', 2000);
+        console.log('>>> ' + command.output);
+        const result = await this.exec(command);
+        const response = result.lastLine();
+        console.log('<<< ' + response);
+        const parts = response.substring(response.indexOf('=') + 1).split(',').map(x => parseInt(x, 10));
+        const sessionId = parseInt(parts[0]);
+        return sessionId;
+    }
+
     async setSession(inSessionId) {
         const sessionId = parseInt(inSessionId)
         this.updateState('Configuring: Setting session ID');
@@ -447,6 +469,17 @@ export default class Ax3Device {
         if (parts[0] != sessionId) {
             throw `SESSION value unexpected: was ${parts[0]}, expected ${sessionId}`;
         }
+    }
+
+    async getMaxSamples() {
+        const command = new Command(`\r\nMAXSAMPLES\r\n`, 'MAXSAMPLES=', 2000);
+        console.log('>>> ' + command.output);
+        const result = await this.exec(command);
+        const response = result.lastLine();
+        console.log('<<< ' + response);
+        const parts = response.substring(response.indexOf('=') + 1).split(',').map(x => parseInt(x, 10));
+        const maxSamples = parseInt(parts[0]);
+        return maxSamples;
     }
 
     async setMaxSamples(maxSamples) {
@@ -510,7 +543,31 @@ export default class Ax3Device {
         }
     }
 
-    async setRate(rate, range, gyro) {
+    async getRate() {
+        const command = new Command(`\r\nRATE\r\n`, 'RATE=', 2000);
+        console.log('>>> ' + command.output);
+        const result = await this.exec(command);
+        const response = result.lastLine();
+        console.log('<<< ' + response);
+        const parts = response.substring(response.indexOf('=') + 1).split(',').map(x => parseInt(x, 10));
+        const rateCode = parseInt(parts[0]);
+
+        let accelRange = 0;
+        if ((rateCode & 0xC0) == 0x00) { accelRange = 16; }
+        else if ((rateCode & 0xC0) == 0x40) { accelRange = 8; }
+        else if ((rateCode & 0xC0) == 0x80) { accelRange = 4; }
+        else if ((rateCode & 0xC0) == 0xC0) { accelRange = 2; }
+
+        const rateResult = {
+            rateCode,
+            rate: parts.length > 1 ? parseInt(parts[1]) : null,
+            accelRange,
+            gyroRange: parts.length > 2 ? parseInt(parts[2]) : null,
+        };
+        return rateResult;
+    }
+
+    async setRate(rate, range, gyro, packed) {
         this.updateState('Configuring: Setting rate');
         let value = 0x00;
 
@@ -529,18 +586,21 @@ export default class Ax3Device {
             default: throw('Invalid accelerometer frequency.');
         }
         if (this.hasGyro && parseFloat(rate) > 1600) {
-            throw('This device has a maximum rate of 1600Hz')
+            throw('This device has a maximum rate of 1600Hz.')
         }
-        if (this.hasGyro && parseFloat(rate) < 25) {
-            throw('This device has a minimum rate of 25Hz')
+        if (!this.hasGyro && packed && parseFloat(rate) < 12) {
+            throw('This device has a minimum rate of 12.5Hz in packed mode.')
+        }
+        if (this.hasGyro && gyro && parseFloat(rate) < 25) {
+            throw('This device has a minimum rate of 25Hz with the gyroscope enabled.')
         }
 				
         switch (parseInt(range))
         {
-            case 16:   value |= 0x00; break;
-            case  8:   value |= 0x40; break;
-            case  4:   value |= 0x80; break;
-            case  2:   value |= 0xC0; break;
+            case 16: value |= 0x00; break;
+            case  8: value |= 0x40; break;
+            case  4: value |= 0x80; break;
+            case  2: value |= 0xC0; break;
             default: throw('Invalid accelerometer sensitivity.');
         }
 
@@ -576,6 +636,52 @@ export default class Ax3Device {
         if (gyroRange && parts[2] != gyroRange) {
             throw `RATE gyro range unexpected: was ${parts[2]}, expected ${gyroRange}`;
         }
+    }
+
+    async getStatus() {
+        const status = {
+            ftl: null,
+            restart: null,
+            nandid: null,
+        };
+        const command = new Command(`\r\nSTATUS\r\nECHO\r\n`, 'ECHO=', 2000);
+        console.log('>>> ' + command.output);
+        const result = await this.exec(command);
+        for (let response of result.lines) {
+            if (response.startsWith('FTL=')) {
+                status.ftl = response.substring(response.indexOf('=') + 1);
+            }
+            else if (response.startsWith('RESTART=')) {
+                status.restart = response.substring(response.indexOf('=') + 1);
+            }
+            else if (response.startsWith('NANDID=')) {
+                status.nandid = response.substring(response.indexOf('=') + 1);
+            }
+        }
+        return status;
+    }
+
+    async getLog() {
+        const log = [];
+        const command = new Command(`\r\nLOG\r\n`, 'LOG,0', 2000);
+        console.log('>>> ' + command.output);
+        const result = await this.exec(command);
+        for (let response of result.lines) {
+            const parts = response.split(',');
+            // LOG,14,0x0204,2021/01/20,12:34:56,NOT_STARTED_AFTER_INTERVAL
+            // LOG,7,0x0209,2021/02/21,13:40:57,NOT_STARTED_WAIT_USB
+            // LOG,0,0x0209,2022/03/22,14:45:58,NOT_STARTED_WAIT_BATTERY
+            if (parts[0] != 'LOG') continue;
+            const index = parseInt(parts[1]);
+            const entry = {
+                index,
+                time: this.parseDateTime(parts[3] + ' ' + parts[4]),
+                code: parts[2], // parseInt()
+                status: /[_A-Z]*/.exec(parts[5])[0],    // remove any trailing garbage bytes
+            };
+            log[index] = entry;
+        }
+        return log;
     }
 
     async setDebug(debugCode) {
@@ -916,7 +1022,7 @@ export default class Ax3Device {
             }
 
             await this.tryAndRetry(() => this.setTime(config.time));
-            await this.tryAndRetry(() => this.setRate(config.rate, config.range, config.gyro));
+            await this.tryAndRetry(() => this.setRate(config.rate, config.range, config.gyro, true));
             await this.tryAndRetry(() => this.setSession(config.session));
             await this.tryAndRetry(() => this.setMaxSamples(config.maxSamples));
             await this.tryAndRetry(() => this.setDebug(config.debug ? 3 : 0));
@@ -963,6 +1069,45 @@ export default class Ax3Device {
         }
     }
 
+    /*
+    >>> ID
+    ID=CWA,17,50,44439,1
+
+    >>> STATUS 3
+    FTL=0,0,106,2,0,0
+
+    >>> STATUS 5
+    RESTART=23
+
+    >>> STATUS 7
+    NANDID=2c:dc:90:95:56:00,4
+
+    >>> SAMPLE\r\nECHO
+    $BATT=706,4136,mV,91,0
+    $LDR=234,234
+    $TEMP=264,191,0.1dC
+    $TIME=2000/01/01,00:41:17.629
+    $ACCEL=9,-37,237
+    $GYRO=
+    ECHO=0
+
+    >>> HIBERNATE
+    HIBERNATE=2021/07/06,13:08:00
+
+    >>> STOP
+    STOP=2021/07/06,14:08:00
+
+    >>> MAXSAMPLES
+    MAXSAMPLES=0
+
+    >>> LOG
+    LOG,14,0x0204,2021/01/20,12:34:56,NOT_STARTED_AFTER_INTERVAL
+    ...
+    LOG,7,0x0209,2021/02/21,13:40:57,NOT_STARTED_WAIT_USB
+    ...
+    LOG,0,0x0209,2022/03/22,14:45:58,NOT_STARTED_WAIT_BATTERY
+
+    */
 
     async runDiagnostic() {
         if (this.device.isBusy()) {
@@ -982,6 +1127,15 @@ export default class Ax3Device {
             this.diagnostic.start = this.status.start;
             this.diagnostic.stop = this.status.stop;
 
+            // Additional information
+            this.diagnostic.rate = await this.getRate();
+            this.diagnostic.time = await this.getTime();
+            this.diagnostic.sessionId = await this.getSession();
+            this.diagnostic.maxSamples = await this.getMaxSamples();
+            this.diagnostic.status = await this.getStatus();
+            this.diagnostic.log = await this.getLog();
+
+            // Finish
             this.recalculateRecordingStatus();  // updateState
 
             return this.diagnostic;
