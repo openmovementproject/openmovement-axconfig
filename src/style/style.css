@@ -110,6 +110,11 @@ body.console #output {
 	top: 2px;
 }
 
+input[type="file"] {
+	display: inline-block;
+	cursor: pointer;
+}
+
 .secondary {
 	background-color: transparent;
 	border: 1px solid transparent;

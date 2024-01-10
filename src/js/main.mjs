@@ -858,6 +858,11 @@ window.addEventListener('DOMContentLoaded', async (event) => {
         }
     });
 
+    document.querySelector('#diagnostic-analyze').addEventListener('click', async () => {
+        // TODO: Analyze selected .CWA file
+        
+    });
+
     document.querySelector('#diagnostic-copy').addEventListener('click', async () => {
         const diagnosticElement = document.querySelector('#diagnostic-text');
         if ('clipboard' in navigator) {
