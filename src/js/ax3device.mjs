@@ -593,6 +593,7 @@ export default class Ax3Device {
     }
 
     async readSector(sectorNumber) {
+        // "0123: 01 23 45 67  89 ab cd ef  01 23 45 67  89 ab cd ef  wxyzwxyzwxyzwxyz\r\n"
         const bytesPerLine = 16;
         const sectorSize = 512;
         const command = new Command(`\r\nREADL ${sectorNumber}\r\n`, 'OK', 10000);
@@ -603,50 +604,77 @@ export default class Ax3Device {
         for (let line of result.lines) {
             if (line.startsWith('READL=')) continue;
             if (line.startsWith('OK')) continue;
-            const offsetString = line.split(':', 1);
+            line = line.trim();
+            const offsetString = line.split(':', 1)[0];
             const offset = parseInt(offsetString, 16);
             if (offset != currentOffset) {
                 throw `Unexpected sector offset ${offset}, expected ${currentOffset}`;
             }
-            const valueString = line.trim().slice(offsetString.length + 1, -bytesPerLine).replace(/\ /g, '');
+            //const valueString = line.slice(offsetString.length + 1, -bytesPerLine).replace(/\ /g, '');
+            const valueString = line.replace(/\ /g, '').slice(offsetString.length + 1, offsetString.length + 1 + 2 * bytesPerLine);
             const byteCount = valueString.length / 2;
             if (byteCount != bytesPerLine) {
                 throw `Unexpected sector line length ${valueString.length} -> ${byteCount}, expected ${2 * bytesPerLine} -> ${bytesPerLine}`;
             }
             for (let i = 0; i < byteCount; i++) {
                 const byte = parseInt(valueString.slice(i * 2, i * 2 + 2), 16);
-                buffer.setUint8(byte);
+                buffer.setUint8(currentOffset, byte);
                 currentOffset++;
             }
         }
         if (currentOffset != sectorSize) {
             throw `Unexpected sector size ${currentOffset}, expected ${sectorSize}`;
         }
-        //console.log('<<< ' + response);
+        // buffer.byteLength // buffer.buffer.byteLength
         return buffer;
     }
     
     async readFilesystem() {
         this.updateState('Reading filesystem');
-        // FAT16
         const filesystem = {};
+        // MBR and first partition data
         filesystem.mbrSector = await this.readSector(0);
+        if (filesystem.mbrSector.getUint8(510) != 0x55 || filesystem.mbrSector.getUint8(511) != 0xAA) {
+            throw 'Invalid MBR signature';
+        }
         filesystem.firstSectorNumber = filesystem.mbrSector.getUint32(454, true); // 94
+        filesystem.sectorCount = filesystem.mbrSector.getUint32(458, true);
+        // FAT16
         filesystem.bootSector = await this.readSector(filesystem.firstSectorNumber);
-        filesystem.sectorsPerCluster = filesystem.bootSector.getUint16(12, true);   // 16384
+        filesystem.sectorSize = filesystem.bootSector.getUint16(11, true);   // 512
+        if (filesystem.sectorSize != 512) {
+            throw 'Invalid sectorSize: ' + filesystem.sectorSize;
+        }
+        filesystem.sectorsPerCluster = filesystem.bootSector.getUint8(13) * filesystem.sectorSize;   // 16384
+        if (filesystem.sectorsPerCluster & (filesystem.sectorsPerCluster - 1)  != 0) {
+            throw 'Invalid sectorsPerCluster: ' + filesystem.sectorsPerCluster;
+        }
         filesystem.numReservedSectors = filesystem.bootSector.getUint16(14, true);  // 8
         filesystem.numFATs = filesystem.bootSector.getUint8(16);    // 2
+        if (filesystem.numFATs < 1 || filesystem.numFATs > 2) {
+            throw 'Invalid numFATs: ' + filesystem.numFATs;
+        }
+        filesystem.firstFatSector = filesystem.firstSectorNumber + filesystem.numReservedSectors;
         filesystem.numRootDirectoryEntries = filesystem.bootSector.getUint16(17, true); // 512
+        if (filesystem.numRootDirectoryEntries == 0) {
+            throw 'Invalid numRootDirectoryEntries: ' + filesystem.numRootDirectoryEntries;
+        }
         filesystem.sectorsPerFAT = filesystem.bootSector.getUint16(22, true); // 61
         filesystem.rootSectorNumber = filesystem.firstSectorNumber + filesystem.numReservedSectors + (filesystem.numFATs * filesystem.sectorsPerFAT); // 224
+
+        // First sector of the root filesystem
         filesystem.rootSector = await this.readSector(filesystem.rootSectorNumber);
+        // First sector of the file area
         filesystem.firstSectorOfFileArea = filesystem.rootSectorNumber + Math.floor((32 * filesystem.numRootDirectoryEntries) / 512);
 
         // Scan first sector of root directory
         filesystem.dataLength = null;
+        filesystem.dataFirstCluster = null;
+        filesystem.dataFirstSector = null;
+        filesystem.dataFirstSectorContents = null;
         for (let i = 0; i < 16; i++) {
             const offset = 32 * i;
-            const entry = 'CWA-DATACWA';
+            const entry = 'CWA-DATACWA';    // Space-padded 8.3 filename with no `.` separator
             let match = true;
             for (let o = 0; o < entry.length; o++) {
                 if (filesystem.rootSector.getUint8(offset + o) != entry.charCodeAt(o)) {
@@ -655,25 +683,17 @@ export default class Ax3Device {
                 }
             }
             if (match) {
+                filesystem.dataFirstCluster = filesystem.rootSector.getUint16(offset + 26, true);
                 filesystem.dataLength = filesystem.rootSector.getUint32(offset + 28, true);
+                // NOTE: For any reads of file data beyond the fist cluster, the FAT cluster chain must be followed.
+                filesystem.dataFirstSector = filesystem.firstSectorOfFileArea + (filesystem.dataFirstCluster - 2) * filesystem.sectorsPerCluster;
+                if (filesystem.dataLength > 0) {
+                    filesystem.dataFirstSectorContents = await this.readSector(filesystem.dataFirstSector);
+                }
                 break;
             }
         }
-
-        return {
-            //mbrSector,
-            firstSectorNumber,
-            //bootSector,
-            sectorsPerCluster,
-            numReservedSectors,
-            numFATs,
-            numRootDirectoryEntries,
-            sectorsPerFAT,
-            rootSectorNumber,
-            //rootSector,
-            firstSectorOfFileArea,
-            dataLength,
-        };
+        return filesystem;
     }
 
 
