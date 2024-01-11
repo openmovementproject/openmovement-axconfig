@@ -813,7 +813,9 @@ function diagnosticResults(diagnostic, label = null) {
 
 function diagnosticClear() {
     diagnosticResults(null, null);
-    document.querySelector('body').classList.remove('diagnostics-open');
+    if (typeof globalParams.diagnostics == 'undefined') {
+        document.querySelector('body').classList.remove('diagnostics-open');
+    }
 }
 
 function runFileDiagnostic(inputFilename, inputContents) {
