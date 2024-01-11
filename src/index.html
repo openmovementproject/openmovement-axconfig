@@ -100,8 +100,8 @@
 
       <div class="disconnected">
         <div class="main_button">
-          <input class="button" id="add_usb_device" type="button" value="Connect USB device...">
-          <input class="button" id="add_serial_device" type="button" value="Connect serial device...">
+          <input class="button" id="add_serial_device" type="button" value="&#x1F517; Connect serial device..." title="Connect to a USB device over its serial interface">
+          <input class="secondary" id="add_usb_device" type="button" value="&#x1F517; Alternative connect device..." title="Attempt to connect to a USB device directly">
         </div>
       </div>
       <div class="connected">
@@ -118,10 +118,10 @@
         <fieldset class="diagnostic-fieldset">
           <legend>Diagnostic Report</legend>
           <div class="diagnostic-controls">
-            <button class="button" type="button" id="diagnostic-run" title="Run Diagnostic">&#x1F5B4; Device Diagnostics</button>
+            <button class="button" type="button" id="diagnostic-run" title="Run Diagnostic on Device">&#x1F5B4; Device Diagnostics</button>
             <label id="diagnostic-file-selection">
               File Diagnostics: 
-              <input type="file" class="button" id="diagnostic-file" accept=".cwa">
+              <input type="file" class="button" id="diagnostic-file" accept=".cwa" title="Run Diagnostic on Downloaded File">
             </label>
             <button class="secondary" type="button" id="diagnostic-reset" title="Wipe and Reset Device">&#x26A0; Reset</button>
           </div>
@@ -151,7 +151,7 @@
         <span class="log-clear-span">| <a id="log-clear" href="">&#x239A; Clear Config Log</a></span>
       </span>
       | <a id="diagnostics-toggle" href="#">&#x1F5B3; Diagnostics</a>
-      | <span class="version">v2024-01-11c</span>
+      | <span class="version">v2024-01-11d</span>
     </div>
   </footer>
 </div>

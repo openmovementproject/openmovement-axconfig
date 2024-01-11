@@ -58,7 +58,33 @@ Options can be added to the address by appending a hash (`#`) then `key=value` p
 
 ...an example URL with multiple options: `https://config.openmovement.dev/#readonly&nodetails&rate=100&range=8&start=0&stop=168`.  If you wanted to add a *Study Code*, something like this: `https://config.openmovement.dev/#readonly&nodetails&rate=100&range=8&start=0&stop=168&metadata=_s%3dMy_Study_Name`.  And if you also knew the recording identifier, it can be embedded into the link: `https://config.openmovement.dev/#readonly&nodetails&rate=100&range=8&start=0&stop=168&metadata=_s%3dMy_Study_Name&code=123abc456`.
 
+
+## Offline
+
+The web application is cached so that it works offline.  In Chrome-based browsers, see `chrome://serviceworker-internals` (or `chrome://appcache-internals/` for earlier versions of this application).  The application is also a *Progressive Web App* and can be installed to the user's desktop/home screen/launcher.
+
+
+## Configuration Logs
+
+Logs are stored locally in the browser.  The following options affect the logs: `nolog`, remove log buttons; `nologclear`, remove *Clear Log* button.  When *Download Log* is clicked, the downloaded log file is in *.CSV* format. Times are local and in the format `YYYY-MM-DD hh:mm:ss`. The *type* reports success/failure and is `AX3-CONFIG-OK`/`AX3-CONFIG-FAILURE` (final configuration check did not match)/`AX3-CONFIG-ERROR` (or `AX6-` prefixed). The line format is:
+
+```
+time,type,deviceId,sessionId,start,stop,frequency,range,"metadata",gyroRange,"subjectCode"
+```
+
+
+## Revoke device access
+
+To reset device access:
+
+1. Press the *View site information* icon to the left of the website address, marked `ⓘ`.
+2. For all permissions labelled *AX3 Composite Device* or *AX6 Composite Device*: 
+   * Press the *Revoke Access* button to the right, marked `✖` or `⏏`.  
+3. Finally, press the `↺` *Refresh* link at the bottom of the page.
+
+
 <!--
+
 ## Device Diagnostics
 
 1. Open a browser that supports *Web Serial*, such as *Google Chrome* or *Edge*.
@@ -85,23 +111,9 @@ Options can be added to the address by appending a hash (`#`) then `key=value` p
 6. Only if you are resetting the device ID: enter the device ID as displayed on the device case.
 7. Click: *OK*.
 8. The device will be wiped and reset.
--->
 
 
-## Offline
-
-The web application is cached so that it works offline.  In Chrome-based browsers, see `chrome://serviceworker-internals` (or `chrome://appcache-internals/` for earlier versions of this application).  The application is also a *Progressive Web App* and can be installed to the user's desktop/home screen/launcher.
-
-
-## Configuration Logs
-
-Logs are stored locally in the browser.  The following options affect the logs: `nolog`, remove log buttons; `nologclear`, remove *Clear Log* button.  When *Download Log* is clicked, the downloaded log file is in *.CSV* format. Times are local and in the format `YYYY-MM-DD hh:mm:ss`. The *type* reports success/failure and is `AX3-CONFIG-OK`/`AX3-CONFIG-FAILURE` (final configuration check did not match)/`AX3-CONFIG-ERROR` (or `AX6-` prefixed). The line format is:
-
-```
-time,type,deviceId,sessionId,start,stop,frequency,range,"metadata",gyroRange,"subjectCode"
-```
-
-<!--
+---
 
 If you are using Linux you may need to add a `udev` entry to prevent the device from being claimed by another driver.  
 Debug using the commands `lsusb -v -d 04d8:0057` and `dmesg | tail -n 30` (also `udevadm info -a -p $(udevadm info -q path -n /dev/ttyACM0)` and, to temporarily remove the ACM module, `sudo rmmod cdc_acm`; or `echo "cdc_acm" | sudo tee -a /etc/modules`). For example, on Debian/Ubuntu/Raspbian, assume the user (e.g. `pi`) is in `plugdev` group, create `/etc/udev/rules.d/07-cwa.rules`:

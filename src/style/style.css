@@ -134,7 +134,7 @@ input[type="file"] {
 }
 	
 /*input[type="button"]*/
-input[type="button"]:disabled, input[type="submit"]:disabled, .button:disabled {
+input[type="button"]:disabled, input[type="submit"]:disabled, .button:disabled, .secondary:disabled {
 	background: #dddddd;
 	cursor: not-allowed;
 }
@@ -250,7 +250,7 @@ footer a:hover, footer a:active {
 .completed .incomplete { display: none; }
 .completed .complete { display: block; }
 
-body.no-configure .complete, body.no-configure .incomplete {
+body.no-configure .complete .main_button, body.no-configure .incomplete {
 	display: none;
 }
 
@@ -324,14 +324,6 @@ body .diagnostics {
 
 body.diagnostics-open .diagnostics {
 	display: block;
-}
-
-#diagnostic-run, #diagnostic-reset {
-	display: none;
-}
-
-.device-connected #diagnostic-run, .device-connected #diagnostic-reset {
-	display: inline-block;
 }
 
 .diagnostic-fieldset textarea {

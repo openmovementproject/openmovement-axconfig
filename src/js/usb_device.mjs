@@ -181,7 +181,7 @@ export default class UsbDevice {
             await this.device.claimInterface(this.io.data.interface);
         } catch (e) {
             console.log('ERROR: Problem claiming data interface (could it already be claimed by a driver?): ' + this.io.data.interface + ' -- ' + e);
-            throw 'Could not claim interface (could it already be claimed by a driver?): ' + this.io.data.interface + ' -- ' + e;
+            throw 'Could not claim interface (could it already be claimed by a driver?) Please try connecting to serial device instead. Issue: ' + this.io.data.interface + ' -- ' + e;
         }
         console.log('...USB opened');
     }

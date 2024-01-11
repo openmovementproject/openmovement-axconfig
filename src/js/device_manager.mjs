@@ -8,6 +8,7 @@ export default class DeviceManager {
 
     constructor(enableUsb, enableSerial) {
         this.enableSerial = enableSerial;
+        this.lastAdd = null;
         this.usbDevices = {};
         this.serialDevices = {};
         this.warnings = [];
@@ -136,6 +137,7 @@ export default class DeviceManager {
     }
 
     async userAddUsbDevice() {
+        this.lastAdd = 'usb';
         if (!navigator.usb) {
             throw 'ERROR: WebUSB is not supported in this browser configuration.';
         }
@@ -168,6 +170,7 @@ export default class DeviceManager {
     }
 
     async userAddSerialDevice() {
+        this.lastAdd = 'serial';
         if (!('serial' in navigator)) {
             throw 'ERROR: Web Serial API is not supported in this browser configuration.';
         }
@@ -181,6 +184,14 @@ export default class DeviceManager {
             const port = await navigator.serial.requestPort(requestOptions);
             console.log('DEVICEMANAGER: Request serial ' + port);
             if (!(port in this.serialDevices)) {
+                if (this.serialDevices.length > 0) {
+                    console.log('WARNING: Only one serial device is supported at a time, but about to add another -- removing old.');
+debugger;
+                    const oldPort = Object.keys(this.serialDevices)[0];
+                    const oldAxDevice = this.serialDevices[oldPort];
+                    if (this.changedHandler) this.changedHandler(oldAxDevice, oldPort, 'disconnect')
+                    delete this.serialDevices[oldPort];
+                }
                 const axDevice = new Ax3Device(new SerialDevice(port));
                 this.serialDevices[port] = axDevice;
             }
@@ -198,13 +209,44 @@ export default class DeviceManager {
     }
 
     getSingleDevice() {
-        const numDevices = Object.keys(this.usbDevices).length + Object.keys(this.serialDevices).length;
-        if (numDevices !== 1) {
-            console.log('ERROR: DeviceManager has ' + numDevices + ' device(s) -- this will only work for a single device.')
-            return null;   // Do not choose any device if it is ambiguous
+        const numUsbDevices = Object.keys(this.usbDevices).length;
+        const numSerialDevices = Object.keys(this.serialDevices).length;
+        if (numUsbDevices == 0 && numSerialDevices == 0) {
+            console.log('ERROR: DeviceManager has no devices -- this will only work for a single device.');
+            return null;   // Do not choose a device if none are available
         }
-        if (Object.keys(this.usbDevices).length > 0) return Object.values(this.usbDevices)[0];
-        if (Object.keys(this.serialDevices).length > 0) return Object.values(this.serialDevices)[0];
+
+        if (numUsbDevices + numSerialDevices !== 1) {
+            console.log('WARNING: DeviceManager has ' + numUsbDevices + ' USB device(s) and ' + numSerialDevices + ' serial device(s).');
+            console.log('USB: ' + JSON.stringify(this.usbDevices));
+            console.log('SERIAL: ' + JSON.stringify(this.serialDevices));
+
+            if (this.lastAdd == 'usb' && numUsbDevices > 0) {
+                console.log('NOTE: Choosing USB...');
+                if (numUsbDevices > 1) {
+                    console.log('ERROR: Multiple USB, but this will only work with a single device.');
+                    return null; // Ambiguous
+                }
+                // Single USB device
+                return Object.values(this.usbDevices)[0];
+            }
+
+            if (numSerialDevices > 1) {
+                console.log('ERROR: Multiple Serial, but this will only work with a single device.');
+                return null; // Ambiguous
+            } else if (numSerialDevices == 1) {
+                // Single USB device
+                return Object.values(this.serialDevices)[0];
+            }
+
+            console.log('ERROR: DeviceManager had an unexpected issue trying to resolve a single device.')
+            return null;
+        }
+
+        // A single device
+        if (numSerialDevices > 0) return Object.values(this.serialDevices)[0];
+        if (numUsbDevices > 0) return Object.values(this.usbDevices)[0];
+        console.log('ERROR: DeviceManager had an unexpected issue trying to resolve a single device.')
         return null;
     }
 

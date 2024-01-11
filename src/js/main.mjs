@@ -339,6 +339,29 @@ const updateEnabled = () => {
     keyInput.submitEnabled(enabled);
 }
 
+function updateDiagnostics() {
+    const hasDevice = document.querySelector('body').classList.contains('device-connected');
+    const hasDiagnostic = document.querySelector('#diagnostic-text').value.startsWith('{');
+
+    console.log('DIAGNOSTICS: Update with device: ' + hasDevice + ' and diagnostic: ' + hasDiagnostic);
+
+    if (hasDevice) {
+        document.querySelector('#diagnostic-run').removeAttribute('disabled');
+        document.querySelector('#diagnostic-reset').removeAttribute('disabled');
+    } else {
+        document.querySelector('#diagnostic-run').setAttribute('disabled', "true");
+        document.querySelector('#diagnostic-reset').setAttribute('disabled', "true");
+    }
+
+    if (hasDiagnostic) {
+        document.querySelector('#diagnostic-copy').removeAttribute('disabled');
+        document.querySelector('#diagnostic-download').removeAttribute('disabled');
+    } else {
+        document.querySelector('#diagnostic-copy').setAttribute('disabled', "true");
+        document.querySelector('#diagnostic-download').setAttribute('disabled', "true");
+    }
+}
+
 const updateStatus = () => {
     let status = {
         deviceType: null,
@@ -366,6 +389,7 @@ const updateStatus = () => {
     } else {
         document.querySelector('body').classList.remove('device-connected');
     }
+    updateDiagnostics();
 
     document.querySelector('#device-id').value = status.deviceId + (status.deviceType ? ' [' + status.deviceType + ']' : '');
     document.querySelector('#battery-meter').value = Number.isNaN(parseInt(status.battery)) ? 0 : parseInt(status.battery);
@@ -809,13 +833,20 @@ function diagnosticResults(diagnostic, label = null) {
     diagnosticElement.select();
     diagnosticElement.scrollTo(0, 0);
     document.querySelector('body').classList.add('diagnostics-open');
+    updateDiagnostics();
 }
 
 function diagnosticClear() {
     diagnosticResults(null, null);
+    document.querySelector('#diagnostic-file').value = '';
     if (typeof globalParams.diagnostics == 'undefined') {
         document.querySelector('body').classList.remove('diagnostics-open');
     }
+}
+
+function refresh() {
+    reconfigure(true, true);
+    location.reload();
 }
 
 function runFileDiagnostic(inputFilename, inputContents) {
@@ -841,13 +872,14 @@ window.addEventListener('DOMContentLoaded', async (event) => {
     domLoaded = true;
 
     deviceManager = new DeviceManager(allowUsb, allowSerial);
+    keyInput = new KeyInput(codeInput);
+
+    await updateStatus();
+    keyInput.start(codeChanged, submit);
 
     for (let warning of deviceManager.warnings) {
         document.getElementById('warnings').appendChild(document.createTextNode('⚠️ ' + warning));
     }
-
-    keyInput = new KeyInput(codeInput);
-    keyInput.start(codeChanged, submit);
 
     deviceManager.startup(deviceChanged);
 
@@ -1033,8 +1065,7 @@ window.addEventListener('DOMContentLoaded', async (event) => {
     }
 
     document.querySelector('#reset').addEventListener('click', (e) => {
-        reconfigure(true, true);
-        location.reload();
+        refresh();
     });
 
     document.querySelector('#log-download').addEventListener('click', (e) => {
