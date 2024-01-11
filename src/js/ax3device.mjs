@@ -1,5 +1,5 @@
 import { sleep, localTime, localTimeString } from './util.mjs';
-import { parseHeader } from './cwa_parse.mjs';
+import { parseHeader, parseData } from './cwa_parse.mjs';
 
 /*
 {
@@ -711,14 +711,20 @@ export default class Ax3Device {
         }
     }
 
-    async readSector(sectorNumber) {
+    async readSector(sectorNumber, arrayBuffer = null, byteOffset = 0, byteLength = null) {
         // "0123: 01 23 45 67  89 ab cd ef  01 23 45 67  89 ab cd ef  testtesttesttest\r\n"
         const bytesPerLine = 16;
         const sectorSize = 512;
         const command = new Command(`\r\nREADL ${sectorNumber}\r\nECHO\r\n`, 'ECHO=', 10000);
         console.log('>>> ' + command.output);
         const result = await this.exec(command);
-        const buffer = new DataView(new ArrayBuffer(sectorSize), 0);
+        if (!arrayBuffer) {
+            arrayBuffer = new ArrayBuffer(sectorSize);
+        }
+        if (byteLength === null) {
+            byteLength = sectorSize;
+        }
+        const buffer = new DataView(arrayBuffer, byteOffset, byteLength);
         let currentOffset = 0;
         for (let line of result.lines) {
             if (line.startsWith('READL=')) continue;
@@ -737,8 +743,12 @@ export default class Ax3Device {
                 throw `Unexpected sector line length ${valueString.length} -> ${byteCount}, expected ${2 * bytesPerLine} -> ${bytesPerLine}`;
             }
             for (let i = 0; i < byteCount; i++) {
-                const byte = parseInt(valueString.slice(i * 2, i * 2 + 2), 16);
-                buffer.setUint8(currentOffset, byte);
+                if (currentOffset < byteLength) {
+                    const byte = parseInt(valueString.slice(i * 2, i * 2 + 2), 16);
+                    buffer.setUint8(currentOffset, byte);
+                } else {
+                    console.log('WARNING: Ignoring sector contents beyond end of read extent: ' + currentOffset);
+                }
                 currentOffset++;
             }
         }
@@ -748,6 +758,64 @@ export default class Ax3Device {
         }
         // buffer.byteLength // buffer.buffer.byteLength
         return buffer;
+    }
+
+    async findFileEntry(filesystem, filename) {
+        // Read first sector of the root filesystem
+        if (!filesystem.rootSector) {
+            filesystem.rootSector = await this.readSector(filesystem.rootSectorNumber);
+        }{}
+
+        // Entry is space-padded 8.3 filename with no `.` separator
+        const parts = filename.split('.'); 
+        const ext = ((parts.length <= 1) ? '' : parts.pop()).trim().toUpperCase().slice(0, 3).padEnd(3, ' '); 
+        const fname = parts.join('').trim().toUpperCase().replace(/ /g, '').slice(0, 8).padEnd(8, ' '); 
+        const entry = fname + ext;
+
+        // Scan first sector of root directory (file must be within the first 16 entries of the root directory)
+        const file = {};
+        file.filename = filename;
+        file.entry = entry;
+        file.exists = false;
+        file.dataLength = null;
+        file.dataFirstCluster = null;
+        for (let i = 0; i < 16; i++) {
+            const offset = 32 * i;
+            let match = true;
+            for (let o = 0; o < entry.length; o++) {
+                if (filesystem.rootSector.getUint8(offset + o) != entry.charCodeAt(o)) {
+                    match = false;
+                    break;
+                }
+            }
+            if (match) {
+                file.exists = true;
+                file.dataFirstCluster = filesystem.rootSector.getUint16(offset + 26, true);
+                file.dataLength = filesystem.rootSector.getUint32(offset + 28, true);
+                break;
+            }
+        }
+        return file;
+    }
+
+    async readFile(filesystem, file, maxSize) {
+        if (!file.exists) { return null; }
+        if (maxSize === null) { maxSize = file.dataLength; }
+        if (maxSize > file.dataLength) { maxSize = file.dataLength; }
+
+        // TODO: For any reads of file data beyond the fist cluster, the FAT cluster chain must be followed.
+        //       (the FAT cluster chain should be cached when read)
+        if (maxSize > filesystem.clusterSize) { maxSize = filesystem.clusterSize; }
+
+        console.log('READ-FILE: Maximum read: ' + maxSize + ' / ' + file.dataLength);
+        const dataContents = new ArrayBuffer(maxSize);
+        for (let sectorOffset = 0; sectorOffset < Math.ceil(maxSize / filesystem.sectorSize); sectorOffset++) {
+            const sector = filesystem.firstSectorOfFileArea + (file.dataFirstCluster - 2) * filesystem.sectorsPerCluster + sectorOffset;
+            console.log('READ-FILE: Reading sectorOffset #' + sectorOffset + ' @sector #' + sector + '...');
+            await this.readSector(sector, dataContents, sectorOffset * filesystem.sectorSize, Math.min(maxSize - sectorOffset * filesystem.sectorSize, filesystem.sectorSize));
+        }
+
+        return dataContents;
     }
     
     async readFilesystem() {
@@ -766,9 +834,13 @@ export default class Ax3Device {
         if (filesystem.sectorSize != 512) {
             throw 'Invalid sectorSize: ' + filesystem.sectorSize;
         }
-        filesystem.sectorsPerCluster = filesystem.bootSector.getUint8(13) * filesystem.sectorSize;   // 16384
+        filesystem.sectorsPerCluster = filesystem.bootSector.getUint8(13) * filesystem.sectorSize;   // 32 // 64
         if (filesystem.sectorsPerCluster & (filesystem.sectorsPerCluster - 1)  != 0) {
             throw 'Invalid sectorsPerCluster: ' + filesystem.sectorsPerCluster;
+        }
+        filesystem.clusterSize = filesystem.sectorsPerCluster * filesystem.sectorSize;   // 16384 // 32768
+        if (filesystem.clusterSize & (filesystem.clusterSize - 1)  != 0) {
+            throw 'Invalid clusterSize: ' + filesystem.clusterSize;
         }
         filesystem.numReservedSectors = filesystem.bootSector.getUint16(14, true);  // 8
         filesystem.numFATs = filesystem.bootSector.getUint8(16);    // 2
@@ -783,37 +855,15 @@ export default class Ax3Device {
         filesystem.sectorsPerFAT = filesystem.bootSector.getUint16(22, true); // 61
         filesystem.rootSectorNumber = filesystem.firstSectorNumber + filesystem.numReservedSectors + (filesystem.numFATs * filesystem.sectorsPerFAT); // 224
 
-        // First sector of the root filesystem
-        filesystem.rootSector = await this.readSector(filesystem.rootSectorNumber);
         // First sector of the file area
         filesystem.firstSectorOfFileArea = filesystem.rootSectorNumber + Math.floor((32 * filesystem.numRootDirectoryEntries) / 512);
 
-        // Scan first sector of root directory
-        filesystem.dataLength = null;
-        filesystem.dataFirstCluster = null;
-        filesystem.dataFirstSector = null;
-        filesystem.dataFirstSectorContents = null;
-        for (let i = 0; i < 16; i++) {
-            const offset = 32 * i;
-            const entry = 'CWA-DATACWA';    // Space-padded 8.3 filename with no `.` separator
-            let match = true;
-            for (let o = 0; o < entry.length; o++) {
-                if (filesystem.rootSector.getUint8(offset + o) != entry.charCodeAt(o)) {
-                    match = false;
-                    break;
-                }
-            }
-            if (match) {
-                filesystem.dataFirstCluster = filesystem.rootSector.getUint16(offset + 26, true);
-                filesystem.dataLength = filesystem.rootSector.getUint32(offset + 28, true);
-                // NOTE: For any reads of file data beyond the fist cluster, the FAT cluster chain must be followed.
-                filesystem.dataFirstSector = filesystem.firstSectorOfFileArea + (filesystem.dataFirstCluster - 2) * filesystem.sectorsPerCluster;
-                if (filesystem.dataLength > 0) {
-                    filesystem.dataFirstSectorContents = await this.readSector(filesystem.dataFirstSector);
-                }
-                break;
-            }
-        }
+        // Read the first few sectors of the data file
+        filesystem.fileEntry = await this.findFileEntry(filesystem, 'CWA-DATA.CWA');
+        const maxSize = 3 * 512;
+        filesystem.fileEntry.dataContents = await this.readFile(filesystem, filesystem.fileEntry, maxSize);
+        filesystem.fileEntry.readLength = filesystem.fileEntry.dataContents.byteLength;
+    
         return filesystem;
     }
 
@@ -1028,7 +1078,7 @@ export default class Ax3Device {
             if (config.noData) {
                 const filesystem = await this.tryAndRetry(() => this.readFilesystem());
                 console.log('FILESYSTEM=' + JSON.stringify(filesystem));
-                if (filesystem.dataLength && filesystem.dataLength > 1024) {
+                if (filesystem.fileEntry && filesystem.fileEntry.dataLength && filesystem.fileEntry.dataLength > 1024) {
                     throw 'ERROR: Device has data on it.'
                 }
             }
@@ -1153,17 +1203,37 @@ export default class Ax3Device {
             }
             
             // Parse initial sector
-            if (this.diagnostic.filesystem && this.diagnostic.filesystem.dataLength > 0 && this.diagnostic.filesystem.dataFirstSectorContents) {
+            if (this.diagnostic.filesystem && this.diagnostic.filesystem.fileEntry && this.diagnostic.filesystem.fileEntry.dataLength > 0 && this.diagnostic.filesystem.fileEntry.dataContents) {
+                let fileData = null;
                 try {
                     this.diagnostic.file = {
-                        filename: 'CWA-DATA.CWA',
-                        length: this.diagnostic.filesystem.dataLength,
+                        filename: this.diagnostic.filesystem.fileEntry.filename,
+                        length: this.diagnostic.filesystem.fileEntry.dataLength,
                         source: 'serial',
                     };
-                    const headerData = this.diagnostic.filesystem.dataFirstSectorContents;
-                    this.diagnostic.header = parseHeader(headerData);
+                    fileData = this.diagnostic.filesystem.fileEntry.dataContents;
                 } catch (e) {
-                    this.diagnostic.errors.push('Problem while parsing data file information: ' + JSON.stringify(e));
+                    this.diagnostic.errors.push('Problem while reading data file: ' + JSON.stringify(e));
+                }
+
+                // First sector
+                if (fileData && this.diagnostic.filesystem.fileEntry.dataLength >= 1 * 512) {
+                    try {
+                        this.diagnostic.header = parseHeader(new DataView(fileData, 0 * 512, 512));
+                    } catch (e) {
+                        this.diagnostic.errors.push('Problem while parsing file header: ' + JSON.stringify(e));
+                    }
+                }
+
+                // Second sector - reserved header
+
+                // Third sector - first data sector
+                if (fileData && this.diagnostic.filesystem.fileEntry.dataLength >= 3 * 512) {
+                    try {
+                        this.diagnostic.first = parseData(new DataView(fileData, 2 * 512, 512));
+                    } catch (e) {
+                        this.diagnostic.errors.push('Problem while parsing file data: ' + JSON.stringify(e));
+                    }
                 }
             }
 
