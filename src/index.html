@@ -112,21 +112,23 @@
             <div><label for="battery">Battery: </label><meter id="battery-meter" min="0" max="100" low="30" high="85" optimum="100" value="0"></meter> <output id="battery">-</output></div>
             <div><label for="state">State: </label><output id="state">-</output></div>
           </span>
-          <div class="device-controls">
-            <button class="secondary" type="button" id="run_diagnostic" title="Run Diagnostic">&#x1F50D; Diagnostic</button>
-          </div>
         </fieldset>
       </div>
       <div class="diagnostics">
         <fieldset class="diagnostic-fieldset">
           <legend>Diagnostic Report</legend>
-          <button class="button" type="button" id="diagnostic-copy" title="Copy report to clipboard">&#x2398; Copy</button>
-          <button class="button" type="button" id="diagnostic-download" title="Download report">&#x21E9; Download</button>
-          <label>
-            <input type="file" id="diagnostic-file" accept=".cwa">
-          </label>
-          <button class="button" type="button" id="diagnostic-analyze" title="Analyze File">&#x1F50D;</button>
+          <div class="diagnostic-controls">
+            <button class="button" type="button" id="diagnostic-run" title="Run Diagnostic">&#x1F5B4; Device Diagnostics</button>
+            <label id="diagnostic-file-selection">
+              File Diagnostics: 
+              <input type="file" class="button" id="diagnostic-file" accept=".cwa">
+            </label>
+          </div>
           <textarea id="diagnostic-text" readonly></textarea>
+          <div class="diagnostic-controls">
+            <button class="button" type="button" id="diagnostic-copy" title="Copy report to clipboard">&#x2398; Copy Report</button>
+            <button class="button" type="button" id="diagnostic-download" title="Download report">&#x21E9; Download Report</button>
+          </div>
         </fieldset>
       </div>
 
@@ -147,7 +149,8 @@
       <span class="log-span">| <a id="log-download" href="">&#x21E9; Download Config Log</a> 
         <span class="log-clear-span">| <a id="log-clear" href="">&#x239A; Clear Config Log</a></span>
       </span>
-      | <span class="version">v2021-07-06</span>
+      | <a id="diagnostics-toggle" href="#">&#x1F5B3; Diagnostics</a>
+      | <span class="version">v2024-01-11</span>
     </div>
   </footer>
 </div>

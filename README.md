@@ -53,8 +53,14 @@ Options can be added to the address by appending a hash (`#`) then `key=value` p
 * `noscan` - Disable camera-based barcode scanning button.
 * `readers=code_128` - Specify which camera-based barcode scanning decoders are enabled (default, `code_128`); a comma-separated list (only enable the specific ones you need to prevent problems with simpler codes), options: `code_128,ean,ean_8,code_39,code_39_vin,codabar,upc,upc_e,i2of5,2of5,code_93`
 * `debug` - show debug console information.
+* `noconfigure` - disable configuration controls (useful for a diagnostics-only mode)
+* `diagnostics` - initially show diagnostics control
 
 ...an example URL with multiple options: `https://config.openmovement.dev/#readonly&nodetails&rate=100&range=8&start=0&stop=168`.  If you wanted to add a *Study Code*, something like this: `https://config.openmovement.dev/#readonly&nodetails&rate=100&range=8&start=0&stop=168&metadata=_s%3dMy_Study_Name`.  And if you also knew the recording identifier, it can be embedded into the link: `https://config.openmovement.dev/#readonly&nodetails&rate=100&range=8&start=0&stop=168&metadata=_s%3dMy_Study_Name&code=123abc456`.
+
+<!--
+Diagnostics-only: https://config.openmovement.dev/#nolog&noconfigure&diagnostics
+-->
 
 
 ## Offline

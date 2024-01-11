@@ -38,6 +38,7 @@ import { redirectConsole, watchParameters, localTimeString, localTimeValue, down
 import KeyInput from './key_input.mjs';
 import DeviceManager from './device_manager.mjs';
 import Barcode from './barcode.mjs';
+import { parseHeader } from './cwa_parse.mjs';
 
 window.addEventListener("error", function (e) {
     document.getElementById('warnings').appendChild(document.createTextNode('⚠️ Unhandled error.'));
@@ -213,6 +214,12 @@ function parametersChanged(params = globalParams) {
     document.querySelector('body').classList.toggle('nolog', typeof params.nolog !== 'undefined');
     document.querySelector('body').classList.toggle('nologclear', typeof params.nologclear !== 'undefined');
 
+    // Disable configuration
+    document.querySelector('body').classList.toggle('no-configure', typeof params.noconfigure !== 'undefined');
+    if (typeof params.diagnostics !== 'undefined') {
+        document.querySelector('body').classList.add('diagnostics-open');
+    }
+
     document.querySelector('#add_usb_device').setAttribute('style', allowUsb ? 'display: inline;' : 'display: none;');
 
     // Barcode scanning
@@ -380,8 +387,7 @@ const updateStatus = () => {
 }
 
 const deviceChanged = async () => {
-    document.querySelector('body').classList.remove('diagnostics-open');
-    document.querySelector('#diagnostic-text').value = '';
+    diagnosticClear();
 
     currentDevice = deviceManager.getSingleDevice();
 
@@ -789,12 +795,12 @@ const submit = async () => {
     }
 };
 
-let diagnosticLabel = 'unknown';
+let diagnosticLabel = null;
 let diagnosticTimestamp = new Date();
-function diagnosticResults(diagnostic, label) {
-    diagnosticLabel = label ? label : 'unknown';
+function diagnosticResults(diagnostic, label = null) {
+    diagnosticLabel = label;
     diagnosticTimestamp = new Date();
-    document.querySelector('.diagnostic-fieldset legend').innerText = 'Diagnostic Report: ' + diagnosticLabel;
+    document.querySelector('.diagnostic-fieldset legend').innerText = 'Diagnostic Report' + (diagnosticLabel ? ': ' + diagnosticLabel : '');
     const diagnosticText = diagnostic ? JSON.stringify(diagnostic, null, 4) : '';
     console.dir(diagnostic);
     const diagnosticElement = document.querySelector('#diagnostic-text');
@@ -803,6 +809,30 @@ function diagnosticResults(diagnostic, label) {
     diagnosticElement.select();
     diagnosticElement.scrollTo(0, 0);
     document.querySelector('body').classList.add('diagnostics-open');
+}
+
+function diagnosticClear() {
+    diagnosticResults(null, null);
+    document.querySelector('body').classList.remove('diagnostics-open');
+}
+
+function runFileDiagnostic(inputFilename, inputContents) {
+    console.log('FILE-DIAGNOSTICS: (' + inputContents.byteLength + ' bytes) -- ' + inputFilename);
+    const diagnostic = {};
+    diagnostic.errors = [];
+    diagnostic.time = new Date();
+    diagnostic.file = {
+        filename: inputFilename,
+        length: inputContents.byteLength,
+        source: 'file',
+    };
+    try {
+        diagnostic.header = parseHeader(inputContents);
+    } catch (e) {
+        console.dir(e);
+        diagnostic.errors.push('Could not parse header: ' + JSON.stringify(e));
+    }
+    diagnosticResults(diagnostic, inputFilename);
 }
 
 window.addEventListener('DOMContentLoaded', async (event) => {
@@ -846,8 +876,18 @@ window.addEventListener('DOMContentLoaded', async (event) => {
         }
     });
 
-    document.querySelector('#run_diagnostic').addEventListener('click', async () => {
+    document.querySelector('#diagnostics-toggle').addEventListener('click', (e) => {
+        e.preventDefault();
+        if (document.querySelector('body').classList.contains('diagnostics-open')) {
+            diagnosticClear();
+        } else {
+            diagnosticResults(null, null);
+        }
+    });
+        
+    document.querySelector('#diagnostic-run').addEventListener('click', async () => {
         try {
+            document.querySelector('#diagnostic-run').setAttribute('disabled', 'true');
             if (currentDevice) {
                 const diagnostic = await currentDevice.runDiagnostic();
                 const label = (diagnostic && diagnostic.id && diagnostic.id.deviceId) ? diagnostic.id.deviceId : 'unknown';
@@ -855,12 +895,9 @@ window.addEventListener('DOMContentLoaded', async (event) => {
             }
         } catch (e) {
             setResult(e, true);
+        } finally {
+            document.querySelector('#diagnostic-run').removeAttribute('disabled');
         }
-    });
-
-    document.querySelector('#diagnostic-analyze').addEventListener('click', async () => {
-        // TODO: Analyze selected .CWA file
-        
     });
 
     document.querySelector('#diagnostic-copy').addEventListener('click', async () => {
@@ -877,9 +914,44 @@ window.addEventListener('DOMContentLoaded', async (event) => {
 
     document.querySelector('#diagnostic-download').addEventListener('click', async () => {
         const timestamp = diagnosticTimestamp.toISOString().replace(/[^0-9]/g, '').substring(0, 14);
-        const filename = 'diagnostic_' + timestamp + '_' + diagnosticLabel + '.txt';
+        const filename = 'diagnostic_' + timestamp + (diagnosticLabel ? '_' + diagnosticLabel : '') + '.txt';
         const diagnosticData = document.querySelector('#diagnostic-text').value;
-        download(diagnosticLabel, diagnosticData, 'text/plain');
+        download(filename, diagnosticData, 'text/plain');
+    });
+
+
+    function setFile(file) {
+        const reader = new FileReader();
+        reader.onload = async function(event) {
+            const inputFilename = file.name;
+            const inputContents = new Uint8Array(event.target.result);
+            const inputDataView = new DataView(inputContents.buffer, inputContents.byteOffset, inputContents.byteLength);
+            runFileDiagnostic(inputFilename, inputDataView);
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function fileChange(event) {
+        const fileList = event.target.files;
+        const file = fileList[0];
+        setFile(file);
+    }
+
+    document.querySelector('#diagnostic-file').addEventListener('change', fileChange);
+
+    document.body.addEventListener('dragover', function(event) {
+        if (!document.querySelector('body').classList.contains('diagnostics-open')) return;
+        event.preventDefault();
+    });
+
+    document.body.addEventListener('drop', function(event) {
+        if (!document.querySelector('body').classList.contains('diagnostics-open')) return;
+        if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
+            event.preventDefault();
+            const file = event.dataTransfer.files[0];
+            document.querySelector('#diagnostic-file').files = event.dataTransfer.files;
+            setFile(file);
+        }
     });
 
     for (let input of ['#delay']) {

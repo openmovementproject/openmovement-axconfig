@@ -80,6 +80,10 @@ export function parseHeader(data) {
             header.metadataRaw = header.metadataRaw.slice(0, i + 1);
             break;
         }
+        if (i == 0) {
+            header.metadataRaw = '';
+            break;
+        }
     }
 
     return header;

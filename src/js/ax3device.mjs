@@ -1084,6 +1084,7 @@ export default class Ax3Device {
 
             this.diagnostic = {};
             this.diagnostic.errors = [];
+            this.diagnostic.time = new Date();
 
             // Existing info from status:
             this.diagnostic.id = this.status.id; // .deviceType .deviceId .firmwareVersion
@@ -1094,7 +1095,7 @@ export default class Ax3Device {
             // Additional information
             try {
                 this.diagnostic.rate = await this.getRate();
-                this.diagnostic.time = await this.getTime();
+                this.diagnostic.deviceTime = await this.getTime();
                 this.diagnostic.sessionId = await this.getSession();
                 this.diagnostic.maxSamples = await this.getMaxSamples();
                 this.diagnostic.status = await this.getStatus();
@@ -1113,6 +1114,11 @@ export default class Ax3Device {
             // Parse initial sector
             if (this.diagnostic.filesystem && this.diagnostic.filesystem.dataLength > 0 && this.diagnostic.filesystem.dataFirstSectorContents) {
                 try {
+                    this.diagnostic.file = {
+                        filename: 'CWA-DATA.CWA',
+                        length: this.diagnostic.filesystem.dataLength,
+                        source: 'serial',
+                    };
                     const headerData = this.diagnostic.filesystem.dataFirstSectorContents;
                     this.diagnostic.header = parseHeader(headerData);
                 } catch (e) {

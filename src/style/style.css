@@ -183,7 +183,7 @@ fieldset label {
 	width: 6em;
 }
 
-fieldset input[type=text], fieldset input[type=number], fieldset input[type=datetime-local], fieldset output, fieldset meter , fieldset select {
+fieldset input[type=text], fieldset input[type=number], fieldset input[type=datetime-local], fieldset output, fieldset meter, fieldset select, fieldset input[type=file] {
 	width: 5em;
 	flex-grow: 1;
 }
@@ -250,6 +250,10 @@ footer a:hover, footer a:active {
 .completed .incomplete { display: none; }
 .completed .complete { display: block; }
 
+body.no-configure .complete, body.no-configure .incomplete {
+	display: none;
+}
+
 #duration_days, #duration_hours, #duration_minutes, #duration_seconds {
 	text-align: right;
 }
@@ -310,8 +314,8 @@ body.scanning #interactive.viewport {
 	display: block;
 	flex-grow: 1;
 }
-.device-fieldset .device-controls {
-	display: block;
+.diagnostic-controls .button {
+	margin-right: 1em;
 }
 
 body .diagnostics {
@@ -322,9 +326,31 @@ body.diagnostics-open .diagnostics {
 	display: block;
 }
 
+#diagnostic-run {
+	display: none;
+}
+.device-connected #diagnostic-run {
+	display: inline-block;
+}
+
 .diagnostic-fieldset textarea {
 	width: 100%;
 	height: 10em;
-	border: none;
+	border: 1px solid black;
+	border-radius: 10px;
 	background: transparent;
+}
+
+#diagnostic-file-selection {
+	text-wrap: none;
+	word-break: keep-all;
+	width: auto;
+}
+
+#diagnostic-file {
+	width: 10em;
+}
+
+#diagnostic-file::file-selector-button {
+  display: none;
 }
