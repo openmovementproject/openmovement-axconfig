@@ -74,6 +74,17 @@ Options can be added to the address by appending a hash (`#`) then `key=value` p
 2. Click: *File Diagnostics*.
 3. Select your `.cwa` file and press *Open* to generate the diagnostic report.
 4. Click: *Download Report* to save a copy of the diagnostics report.
+
+## Device Wipe and Reset
+
+1. Open a browser that supports *Web Serial*, such as *Google Chrome* or *Edge*.
+2. Visit the page: [AX Diagnostics](https://config.openmovement.dev/#diagnostics&nolog&noconfigure&title=AX+Diagnostics)
+3. Ensure a single device is connected (wait around 10 seconds after connecting the device).
+4. Click: *Connect serial device...* and choose the attached *AX* device.
+5. Click: *Reset* and *OK*.
+6. Only if you are resetting the device ID: enter the device ID as displayed on the device case.
+7. Click: *OK*.
+8. The device will be wiped and reset.
 -->
 
 

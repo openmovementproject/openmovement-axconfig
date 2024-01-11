@@ -373,6 +373,18 @@ export default class Ax3Device {
         return options;
     }
 
+    async setId(id) {
+        const command = new Command(`\r\nDEVICE=${id}\r\n`, 'DEVICE=', 2000);
+        console.log('>>> ' + command.output);
+        const result = await this.exec(command);
+        const response = result.lastLine();
+        console.log('<<< ' + response);
+        const parts = response.substring(response.indexOf('=') + 1).split(',').map(x => parseInt(x, 10));
+        if (parts[0] != id || parts[1] != id) {
+            throw `DEVICE value unexpected: was ${parts[0]} / ${parts[1]}, expected ${id}`;
+        }
+    }
+
     async getId() {
         const command = new Command(`\r\nID\r\n`, 'ID=', 2000);
         console.log('>>> ' + command.output);
@@ -971,6 +983,7 @@ export default class Ax3Device {
             await this.tryAndRetry(() => this.open());
 
             const defaultConfig = {
+                resetDeviceId: null,
                 minbattery: null,
                 configLed: Ax3Device.LED_BLUE,
                 time: null,
@@ -1024,6 +1037,9 @@ export default class Ax3Device {
                 config.time = new Date();
             }
 
+            if (config.resetDeviceId) {
+                this.setId(config.resetDeviceId);
+            }
             await this.tryAndRetry(() => this.setTime(config.time));
             await this.tryAndRetry(() => this.setRate(config.rate, config.range, config.gyro, true));
             await this.tryAndRetry(() => this.setSession(config.session));
@@ -1070,6 +1086,31 @@ export default class Ax3Device {
         } finally {
             await this.close();
         }
+    }
+
+    async runReset(deviceId) {
+        //DEVICE=12345|TIME 2020-01-01 00:00:00|FORMAT QC|LED 5
+        let resetConfig = {
+            time: new Date(),
+            session: 0,
+            rate: 100,
+            range: 8,
+            gyro: 0,
+            start: -1,
+            stop: 0,
+            metadata: '',
+            maxSamples: 0,
+            debug: 0,
+            wipe: true,
+            minbattery: 0,
+            noData: false,
+        }
+
+        if (deviceId) {
+            resetConfig.resetDeviceId = deviceId;
+        }
+
+        this.configure(resetConfig);
     }
 
     async runDiagnostic() {

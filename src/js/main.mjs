@@ -890,6 +890,7 @@ window.addEventListener('DOMContentLoaded', async (event) => {
     document.querySelector('#diagnostic-run').addEventListener('click', async () => {
         try {
             document.querySelector('#diagnostic-run').setAttribute('disabled', 'true');
+            document.querySelector('#diagnostic-reset').setAttribute('disabled', 'true');
             if (currentDevice) {
                 const diagnostic = await currentDevice.runDiagnostic();
                 const label = (diagnostic && diagnostic.id && diagnostic.id.deviceId) ? diagnostic.id.deviceId : 'unknown';
@@ -899,6 +900,37 @@ window.addEventListener('DOMContentLoaded', async (event) => {
             setResult(e, true);
         } finally {
             document.querySelector('#diagnostic-run').removeAttribute('disabled');
+            document.querySelector('#diagnostic-reset').removeAttribute('disabled');
+        }
+    });
+
+    document.querySelector('#diagnostic-reset').addEventListener('click', async () => {
+        try {
+            document.querySelector('#diagnostic-run').setAttribute('disabled', 'true');
+            document.querySelector('#diagnostic-reset').setAttribute('disabled', 'true');
+            diagnosticResults('', null);
+            if (currentDevice) {
+                const wipeMessage = 'CAUTION: You want to DELETE ALL DATA from this device and RESET the device?';
+                if (!window.confirm(wipeMessage)) {
+                    throw 'Reset cancelled';
+                }
+                const idMessage = 'WIPE and RESET the device now?  (Enter ID from device case to reset the device ID, or leave blank to keep the current ID)';
+                const idString = window.prompt(idMessage, '');
+                if (idString === null) throw 'Reset cancelled';
+                if (idString !== '') {
+                    const id = parseInt(idString)
+                    if (id != idString || id < 0 || id > 4294967295) {
+                        throw 'Invalid ID: ' + idString;
+                    }
+                }
+                await currentDevice.runReset(idString);
+                diagnosticResults('Device reset' + (idString ? ': ' + idString : ''), null);
+            }
+        } catch (e) {
+            setResult(e, true);
+        } finally {
+            document.querySelector('#diagnostic-run').removeAttribute('disabled');
+            document.querySelector('#diagnostic-reset').removeAttribute('disabled');
         }
     });
 

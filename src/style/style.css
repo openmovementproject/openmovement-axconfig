@@ -326,10 +326,11 @@ body.diagnostics-open .diagnostics {
 	display: block;
 }
 
-#diagnostic-run {
+#diagnostic-run, #diagnostic-reset {
 	display: none;
 }
-.device-connected #diagnostic-run {
+
+.device-connected #diagnostic-run, .device-connected #diagnostic-reset {
 	display: inline-block;
 }
 
