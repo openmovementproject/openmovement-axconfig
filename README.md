@@ -59,7 +59,21 @@ Options can be added to the address by appending a hash (`#`) then `key=value` p
 ...an example URL with multiple options: `https://config.openmovement.dev/#readonly&nodetails&rate=100&range=8&start=0&stop=168`.  If you wanted to add a *Study Code*, something like this: `https://config.openmovement.dev/#readonly&nodetails&rate=100&range=8&start=0&stop=168&metadata=_s%3dMy_Study_Name`.  And if you also knew the recording identifier, it can be embedded into the link: `https://config.openmovement.dev/#readonly&nodetails&rate=100&range=8&start=0&stop=168&metadata=_s%3dMy_Study_Name&code=123abc456`.
 
 <!--
-Diagnostics-only: https://config.openmovement.dev/#nolog&noconfigure&diagnostics
+## Device Diagnostics
+
+1. Open a browser that supports *Web Serial*, such as *Google Chrome* or *Edge*.
+2. Visit the page: [AX Diagnostics](https://config.openmovement.dev/#diagnostics&nolog&noconfigure&title=AX+Diagnostics)
+3. Ensure a single device is connected (wait around 10 seconds after connecting the device).
+4. Click: *Connect serial device...* and choose the attached *AX* device.
+5. Click: *Device Diagnostics* to generate the diagnostic report.
+6. Click: *Download Report* to save a copy of the diagnostics report.
+
+## File Diagnostics
+
+1. In your browser, visit the page: [AX Diagnostics](https://config.openmovement.dev/#diagnostics&nolog&noconfigure&title=AX+Diagnostics)
+2. Click: *File Diagnostics*.
+3. Select your `.cwa` file and press *Open* to generate the diagnostic report.
+4. Click: *Download Report* to save a copy of the diagnostics report.
 -->
 
 
