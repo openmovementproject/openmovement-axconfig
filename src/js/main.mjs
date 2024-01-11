@@ -38,7 +38,7 @@ import { redirectConsole, watchParameters, localTimeString, localTimeValue, down
 import KeyInput from './key_input.mjs';
 import DeviceManager from './device_manager.mjs';
 import Barcode from './barcode.mjs';
-import { parseHeader } from './cwa_parse.mjs';
+import { parseHeader, parseData } from './cwa_parse.mjs';
 
 window.addEventListener("error", function (e) {
     document.getElementById('warnings').appendChild(document.createTextNode('⚠️ Unhandled error.'));
@@ -849,22 +849,49 @@ function refresh() {
     location.reload();
 }
 
-function runFileDiagnostic(inputFilename, inputContents) {
-    console.log('FILE-DIAGNOSTICS: (' + inputContents.byteLength + ' bytes) -- ' + inputFilename);
+function runFileDiagnostic(inputFilename, fileData) {
+    console.log('FILE-DIAGNOSTICS: (' + fileData.byteLength + ' bytes) -- ' + inputFilename);
     const diagnostic = {};
     diagnostic.errors = [];
     diagnostic.time = new Date();
     diagnostic.file = {
         filename: inputFilename,
-        length: inputContents.byteLength,
+        length: fileData.byteLength,
         source: 'file',
     };
-    try {
-        diagnostic.header = parseHeader(inputContents);
-    } catch (e) {
-        console.dir(e);
-        diagnostic.errors.push('Could not parse header: ' + JSON.stringify(e));
+    
+    // First sector (header)
+    if (fileData.byteLength >= 1 * 512) {
+        try {
+            diagnostic.header = parseHeader(new DataView(fileData.buffer, 0 * 512, 512));
+        } catch (e) {
+            console.dir(e);
+            diagnostic.errors.push('Could not parse header: ' + JSON.stringify(e));
+        }
     }
+
+    // Seconds sector (reserved header)
+
+    // Third sector (first data sector)
+    if (fileData.byteLength >= 3 * 512) {
+        try {
+            diagnostic.first = parseData(new DataView(fileData.buffer, 2 * 512, 512));
+        } catch (e) {
+            console.dir(e);
+            diagnostic.errors.push('Could not parse first data: ' + JSON.stringify(e));
+        }
+    }
+
+    // Last sector (last data sector)
+    if (fileData.byteLength >= 4 * 512) {
+        try {
+            diagnostic.last = parseData(new DataView(fileData.buffer, fileData.byteLength - 512, 512));
+        } catch (e) {
+            console.dir(e);
+            diagnostic.errors.push('Could not parse last data: ' + JSON.stringify(e));
+        }
+    }
+
     diagnosticResults(diagnostic, inputFilename);
 }
 
@@ -991,8 +1018,7 @@ window.addEventListener('DOMContentLoaded', async (event) => {
         reader.onload = async function(event) {
             const inputFilename = file.name;
             const inputContents = new Uint8Array(event.target.result);
-            const inputDataView = new DataView(inputContents.buffer, inputContents.byteOffset, inputContents.byteLength);
-            runFileDiagnostic(inputFilename, inputDataView);
+            runFileDiagnostic(inputFilename, inputContents);
         };
         reader.readAsArrayBuffer(file);
     }

@@ -200,7 +200,7 @@ export function parseData(data) {
     }
 
     // Add fractional time to timestamp
-    result.timestamp = new Date(result.timestampRaw + (timeFractional / 65536) * 1000);
+    result.timestamp = new Date(result.timestampRaw.getTime() + (timeFractional / 65536) * 1000);
 
 
     // Parse samples
