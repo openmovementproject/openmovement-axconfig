@@ -760,6 +760,46 @@ export default class Ax3Device {
         return buffer;
     }
 
+    // Current position
+    fileTell(filesystem, file) {
+        return file.sectorWithinFile * filesystem.sectorSize + file.offsetWithinSector;
+    }
+
+    // Seek to start
+    fileReset(filesystem, file) {
+        file.currentCluster = file.dataFirstCluster;
+        file.currentSectorWithinFile = 0;
+        file.offsetWithinSector = 0;
+    }
+
+    // Seek to offset
+    async fileSeek(filesystem, file, offset) {
+        this.fileReset(filesystem, file);
+
+        // TODO: This does not yet follow the cluster chain
+        if (offset != 0) {
+            throw 'Seeking to offset not yet implemented';
+        }
+
+        return true;
+    }
+
+    async fileRead(filesystem, file, maxSize, dataContents, index) {
+        const sector = filesystem.firstSectorOfFileArea + (file.currentCluster - 2) * filesystem.sectorsPerCluster + (file.currentSectorWithinFile % filesystem.sectorsPerCluster);
+        console.log('READ-FILE: Reading @index=' + index + ' sector #' + sector + '...');
+        if (maxSize > filesystem.sectorSize - file.offsetWithinSector) {
+            maxSize = filesystem.sectorSize - file.offsetWithinSector;
+        }
+
+        // TODO: This does not yet use offsetWithinSector (must currently be sector-aligned reads)
+        //       ...and does not cache the current sector for multiple small reads.
+        //       ...and does not call fileSeek to advance the sector if needed.
+        await this.readSector(sector, dataContents, index, maxSize);
+
+        file.currentSectorWithinFile++;
+        return maxSize;
+    }
+
     async findFileEntry(filesystem, filename) {
         // Read first sector of the root filesystem
         if (!filesystem.rootSector) {
@@ -795,26 +835,31 @@ export default class Ax3Device {
                 break;
             }
         }
+
+        this.fileReset(filesystem, file);
         return file;
     }
 
-    async readFile(filesystem, file, maxSize) {
+    async readFile(filesystem, file, offset, maxSize) {
         if (!file.exists) { return null; }
-        if (maxSize === null) { maxSize = file.dataLength; }
-        if (maxSize > file.dataLength) { maxSize = file.dataLength; }
-
-        // TODO: For any reads of file data beyond the fist cluster, the FAT cluster chain must be followed.
-        //       (the FAT cluster chain should be cached when read)
-        if (maxSize > filesystem.clusterSize) { maxSize = filesystem.clusterSize; }
-
+        if (!await this.fileSeek(filesystem, file, offset)) {
+            throw 'Cannot seek to offset: ' + offset;
+        }
+        if (maxSize === null) { maxSize = file.dataLength - offset; }
+        if (maxSize > file.dataLength - offset) { maxSize = file.dataLength - offset; }
+        
         console.log('READ-FILE: Maximum read: ' + maxSize + ' / ' + file.dataLength);
         const dataContents = new ArrayBuffer(maxSize);
-        for (let sectorOffset = 0; sectorOffset < Math.ceil(maxSize / filesystem.sectorSize); sectorOffset++) {
-            const sector = filesystem.firstSectorOfFileArea + (file.dataFirstCluster - 2) * filesystem.sectorsPerCluster + sectorOffset;
-            console.log('READ-FILE: Reading sectorOffset #' + sectorOffset + ' @sector #' + sector + '...');
-            await this.readSector(sector, dataContents, sectorOffset * filesystem.sectorSize, Math.min(maxSize - sectorOffset * filesystem.sectorSize, filesystem.sectorSize));
+        let index = 0;
+        for (;;) {
+            console.log('READ-FILE: Reading @index=' + index + '...');
+            const read = await this.fileRead(filesystem, file, maxSize - index, dataContents, index);
+            if (read <= 0) break;
+            index += read;
         }
-
+        if (index < maxSize) {
+            console.log('WARNING: Short read: ' + index + ' / ' + maxSize);
+        }
         return dataContents;
     }
     
@@ -861,7 +906,7 @@ export default class Ax3Device {
         // Read the first few sectors of the data file
         filesystem.fileEntry = await this.findFileEntry(filesystem, 'CWA-DATA.CWA');
         const maxSize = 3 * 512;
-        filesystem.fileEntry.dataContents = await this.readFile(filesystem, filesystem.fileEntry, maxSize);
+        filesystem.fileEntry.dataContents = await this.readFile(filesystem, filesystem.fileEntry, 0, maxSize);
         filesystem.fileEntry.readLength = filesystem.fileEntry.dataContents.byteLength;
     
         return filesystem;
