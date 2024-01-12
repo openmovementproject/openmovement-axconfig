@@ -120,8 +120,8 @@ export function parseData(data) {
     result.temperature = (result.temperatureRaw & 0x03ff) * 75.0 / 256 - 50;
     result.events = data.getUint8(22, true);
     result.batteryStored = data.getUint8(23, true);
-    result.batteryRaw = result.batteryStored;
-    result.battery = (result.batteryRaw + 512.0) * 6000 / 1024 / 1000.0;
+    result.batteryRaw = result.batteryStored + 512;
+    result.battery = result.batteryRaw * 6000 / 1024 / 1000.0;
     result.rateCode = data.getUint8(24, true);
     result.numAxesBPS = data.getUint8(25, true);
     result.timestampOffsetRaw = data.getInt16(26, true);
@@ -202,14 +202,12 @@ export function parseData(data) {
     // Add fractional time to timestamp
     result.timestamp = new Date(result.timestampRaw.getTime() + (timeFractional / 65536) * 1000);
 
-
     // Parse samples
     result.samples = [];
-    const block = new Uint8Array(data.buffer, 30, 480);
     if (result.bytesPerSample == 4) {
         for (let i = 0; i < result.sampleCount; i++) {
-            const ofs = i * 4;
-            const val = block[ofs] | (block[ofs + 1] << 8) | (block[ofs + 2] << 16) | (block[ofs + 3] << 24);
+            const ofs = 30 + i * 4;
+            const val = data.getUint32(ofs, true);
             const ex = (6 - ((val >> 30) & 3));
             result.samples.push([
                 (short_sign_extend((0xffc0 & (val <<  6))) >> ex) / accelUnit,
@@ -217,24 +215,24 @@ export function parseData(data) {
                 (short_sign_extend((0xffc0 & (val >> 14))) >> ex) / accelUnit,
             ]);
         }
-    } else if (result.bytesPerSample == 2) {
+    } else if (result.bytesPerAxis == 2) {
         for (let i = 0; i < result.sampleCount; i++) {
-            const ofs = i * 2 * result.channels + 2 * accelAxis;
+            const ofs = 30 + (i * 2 * channels) + 2 * accelAxis;
             result.samples.push([
-                (block[ofs + 0] | (block[ofs + 1] << 8)) / accelUnit,
-                (block[ofs + 2] | (block[ofs + 3] << 8)) / accelUnit,
-                (block[ofs + 4] | (block[ofs + 5] << 8)) / accelUnit,
+                data.getUint16(ofs + 0, true) / accelUnit,
+                data.getUint16(ofs + 2, true) / accelUnit,
+                data.getUint16(ofs + 4, true) / accelUnit,
             ]);
         }
 
         if (gyroAxis >= 0) {
             result.samplesGyro = [];
             for (let i = 0; i < result.sampleCount; i++) {
-                const ofs = i * 2 * result.channels + 2 * gyroAxis;
-                result.samplesGyro.push([
-                    (block[ofs + 0] | (block[ofs + 1] << 8)) / gyroUnit,
-                    (block[ofs + 2] | (block[ofs + 3] << 8)) / gyroUnit,
-                    (block[ofs + 4] | (block[ofs + 5] << 8)) / gyroUnit,
+                const ofs = 30 + (i * 2 * channels) + 2 * gyroAxis;
+                result.samples.push([
+                    data.getUint16(ofs + 0, true) / gyroUnit,
+                    data.getUint16(ofs + 2, true) / gyroUnit,
+                    data.getUint16(ofs + 4, true) / gyroUnit,
                 ]);
             }
         }
