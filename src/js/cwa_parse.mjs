@@ -204,7 +204,7 @@ export function parseData(data) {
 
     // Parse samples
     result.samples = [];
-    if (result.bytesPerSample == 4) {
+    if (result.bytesPerSample == 4 && result.channels == 3) {
         for (let i = 0; i < result.sampleCount; i++) {
             const ofs = 30 + i * 4;
             const val = data.getUint32(ofs, true);
@@ -217,22 +217,22 @@ export function parseData(data) {
         }
     } else if (result.bytesPerAxis == 2) {
         for (let i = 0; i < result.sampleCount; i++) {
-            const ofs = 30 + (i * 2 * channels) + 2 * accelAxis;
+            const ofs = 30 + (i * 2 * result.channels) + 2 * accelAxis;
             result.samples.push([
-                data.getUint16(ofs + 0, true) / accelUnit,
-                data.getUint16(ofs + 2, true) / accelUnit,
-                data.getUint16(ofs + 4, true) / accelUnit,
+                data.getInt16(ofs + 0, true) / accelUnit,
+                data.getInt16(ofs + 2, true) / accelUnit,
+                data.getInt16(ofs + 4, true) / accelUnit,
             ]);
         }
 
         if (gyroAxis >= 0) {
             result.samplesGyro = [];
             for (let i = 0; i < result.sampleCount; i++) {
-                const ofs = 30 + (i * 2 * channels) + 2 * gyroAxis;
-                result.samples.push([
-                    data.getUint16(ofs + 0, true) / gyroUnit,
-                    data.getUint16(ofs + 2, true) / gyroUnit,
-                    data.getUint16(ofs + 4, true) / gyroUnit,
+                const ofs = 30 + (i * 2 * result.channels) + 2 * gyroAxis;
+                result.samplesGyro.push([
+                    data.getInt16(ofs + 0, true) / gyroUnit,
+                    data.getInt16(ofs + 2, true) / gyroUnit,
+                    data.getInt16(ofs + 4, true) / gyroUnit,
                 ]);
             }
         }
