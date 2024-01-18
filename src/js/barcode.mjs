@@ -3,7 +3,7 @@
 // ...from: https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.3.1/dist/quagga.js
 // ...and:  https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.3.1/dist/quagga.min.js
 
-import Quagga from './quagga.min.js';
+import Quagga from './quagga.js'; // './quagga.min.js';
 
 /*
 function sleep(timeMs) {

@@ -770,33 +770,82 @@ export default class Ax3Device {
         file.currentCluster = file.dataFirstCluster;
         file.currentSectorWithinFile = 0;
         file.offsetWithinSector = 0;
+        file.currentSectorBuffer = null;
     }
 
     // Seek to offset
     async fileSeek(filesystem, file, offset) {
-        this.fileReset(filesystem, file);
-
-        // TODO: This does not yet follow the cluster chain
-        if (offset != 0) {
-            throw 'Seeking to offset not yet implemented';
+        // Seek within current sector does nothing
+        const seekSector = Math.floor(offset / filesystem.sectorSize);
+        if (seekSector == file.currentSectorWithinFile) {
+            return true;
         }
+
+        // Otherwise, sector will be changing
+        file.currentSectorBuffer = null;
+
+        // Determine current and new cluster indexes
+        let currentClusterIndex = Math.floor(file.currentSectorWithinFile / filesystem.sectorsPerCluster);
+        const newClusterIndex = Math.floor(seekSector / filesystem.sectorsPerCluster);
+
+        // If seek before the current-cluster, start at beginning of the chain
+        if (newClusterIndex < currentClusterIndex) {
+            currentClusterIndex = 0;
+            file.currentCluster = file.dataFirstCluster;
+        }
+
+        // Follow chain from current cluster until we reach the required cluster index
+        while (currentClusterIndex != newClusterIndex) {
+            throw 'Seeking to an offset outside the first cluster is not yet implemented';
+            //file.currentCluster = (((read FAT entry at file.currentCluster)))
+            //currentClusterIndex++;
+        }
+
+        file.currentSectorWithinFile = seekSector;
+        file.offsetWithinSector = offset % filesystem.sectorSize;
 
         return true;
     }
 
     async fileRead(filesystem, file, maxSize, dataContents, index) {
-        const sector = filesystem.firstSectorOfFileArea + (file.currentCluster - 2) * filesystem.sectorsPerCluster + (file.currentSectorWithinFile % filesystem.sectorsPerCluster);
-        console.log('READ-FILE: Reading @index=' + index + ' sector #' + sector + '...');
+        console.log('READ-FILE: @maxSize=' + maxSize);
+
+        // Ignore empty reads
+        if (maxSize <= 0) return 0;
+
+        // Seek if past all of existing sector
+        if (file.offsetWithinSector >= filesystem.sectorSize) {
+            file.offsetWithinSector = 0;
+            file.currentSectorWithinFile++;
+            const newOffset = file.currentSectorWithinFile * filesystem.sectorSize + file.offsetWithinSector;
+            console.log('READ-FILE: Seeking @' + newOffset);
+            await this.fileSeek(filesystem, file, newOffset);
+            console.log('READ-FILE: ...seek result @' + file.currentSectorWithinFile);
+        }
+
+        // Read in sector buffer, if not yet read
+        if (file.currentSectorBuffer == null) {
+            const sector = filesystem.firstSectorOfFileArea + (file.currentCluster - 2) * filesystem.sectorsPerCluster + (file.currentSectorWithinFile % filesystem.sectorsPerCluster);
+            file.currentSectorBuffer = new ArrayBuffer(filesystem.sectorSize);
+            console.log('READ-SECTOR: ' + sector);
+            await this.readSector(sector, file.currentSectorBuffer, 0, filesystem.sectorSize);
+        }
+
         if (maxSize > filesystem.sectorSize - file.offsetWithinSector) {
             maxSize = filesystem.sectorSize - file.offsetWithinSector;
         }
+        console.log('READ-FILE: Sub-reading @offset=' + file.offsetWithinSector + ' @index=' + index + ' sector #' + filesystem.firstSectorOfFileArea + (file.currentCluster - 2) * filesystem.sectorsPerCluster + (file.currentSectorWithinFile % filesystem.sectorsPerCluster) + ' maxSize=' + maxSize +'...');
 
-        // TODO: This does not yet use offsetWithinSector (must currently be sector-aligned reads)
-        //       ...and does not cache the current sector for multiple small reads.
-        //       ...and does not call fileSeek to advance the sector if needed.
-        await this.readSector(sector, dataContents, index, maxSize);
+        const bufferIn = new DataView(file.currentSectorBuffer, file.offsetWithinSector, maxSize);
+        const bufferOut = new DataView(dataContents, index, maxSize);
+        for (let i = 0; i < maxSize; i++) {
+            const value = bufferIn.getUint8(i);
+            bufferOut.setUint8(i, value);
+        }
+        file.offsetWithinSector += maxSize;
 
-        file.currentSectorWithinFile++;
+        console.log('READ-FILE: Sub-reading finished @offset=' + file.offsetWithinSector);
+
         return maxSize;
     }
 
