@@ -1,6 +1,8 @@
 import { sleep, localTime, localTimeString } from './util.mjs';
 import { parseHeader, parseData } from './cwa_parse.mjs';
 
+const GLOBAL_TEMP_READ_LAST_SECTOR = !true;
+
 /*
 {
     '_c':   'StudyCentre',
@@ -775,13 +777,17 @@ export default class Ax3Device {
 
     // Seek to offset
     async fileSeek(filesystem, file, offset) {
+        console.log('READ-FILE: Seeking @' + offset);
+
         // Seek within current sector does nothing
         const seekSector = Math.floor(offset / filesystem.sectorSize);
         if (seekSector == file.currentSectorWithinFile) {
+            console.log('READ-FILE: seeking within current sector');
             return true;
         }
 
         // Otherwise, sector will be changing
+        console.log('READ-FILE: seeking outside current sector');
         file.currentSectorBuffer = null;
 
         // Determine current and new cluster indexes
@@ -790,12 +796,16 @@ export default class Ax3Device {
 
         // If seek before the current-cluster, start at beginning of the chain
         if (newClusterIndex < currentClusterIndex) {
+            console.log('READ-FILE: seeking before current cluster, starting at beginning of chain');
             currentClusterIndex = 0;
             file.currentCluster = file.dataFirstCluster;
         }
 
+        if (newClusterIndex == currentClusterIndex) console.log('READ-FILE: seeking within current cluster');
+
         // Follow chain from current cluster until we reach the required cluster index
         while (currentClusterIndex != newClusterIndex) {
+            console.log('READ-FILE: seeking after current cluster, following chain');
             throw 'Seeking to an offset outside the first cluster is not yet implemented';
             //file.currentCluster = (((read FAT entry at file.currentCluster)))
             //currentClusterIndex++;
@@ -803,22 +813,21 @@ export default class Ax3Device {
 
         file.currentSectorWithinFile = seekSector;
         file.offsetWithinSector = offset % filesystem.sectorSize;
+        console.log('READ-FILE: seeking complete, sector ' + file.currentSectorWithinFile + ', offset ' + file.offsetWithinSector + '');
 
         return true;
     }
 
     async fileRead(filesystem, file, maxSize, dataContents, index) {
-        console.log('READ-FILE: @maxSize=' + maxSize);
+        console.log('READ-FILE: @maxSize=' + maxSize + ', current-offset=' + file.offsetWithinSector + ' / ' + filesystem.sectorSize);
 
         // Ignore empty reads
         if (maxSize <= 0) return 0;
 
         // Seek if past all of existing sector
         if (file.offsetWithinSector >= filesystem.sectorSize) {
-            file.offsetWithinSector = 0;
-            file.currentSectorWithinFile++;
-            const newOffset = file.currentSectorWithinFile * filesystem.sectorSize + file.offsetWithinSector;
-            console.log('READ-FILE: Seeking @' + newOffset);
+            // Seek to start of next sector
+            const newOffset = (file.currentSectorWithinFile + 1) * filesystem.sectorSize;
             await this.fileSeek(filesystem, file, newOffset);
             console.log('READ-FILE: ...seek result @' + file.currentSectorWithinFile);
         }
@@ -907,7 +916,7 @@ export default class Ax3Device {
             index += read;
         }
         if (index < maxSize) {
-            console.log('WARNING: Short read: ' + index + ' / ' + maxSize);
+            console.log('READ-FILE WARNING: Short read: ' + index + ' / ' + maxSize);
         }
         return dataContents;
     }
@@ -954,10 +963,17 @@ export default class Ax3Device {
 
         // Read the first few sectors of the data file
         filesystem.fileEntry = await this.findFileEntry(filesystem, 'CWA-DATA.CWA');
-        const maxSize = 3 * 512;
-        filesystem.fileEntry.dataContents = await this.readFile(filesystem, filesystem.fileEntry, 0, maxSize);
+
+        // Read the first few sectors of the file
+        filesystem.fileEntry.dataContents = await this.readFile(filesystem, filesystem.fileEntry, 0, 3 * 512);
         filesystem.fileEntry.readLength = filesystem.fileEntry.dataContents.byteLength;
-    
+
+        if (filesystem.fileEntry.dataLength >= 3 * 512) {
+            // Read the last sector of the file
+if (GLOBAL_TEMP_READ_LAST_SECTOR)
+            filesystem.fileEntry.lastDataContents = await this.readFile(filesystem, filesystem.fileEntry, filesystem.fileEntry.dataLength - 512, 512);
+        }
+   
         return filesystem;
     }
 
@@ -1299,6 +1315,7 @@ export default class Ax3Device {
             // Parse initial sector
             if (this.diagnostic.filesystem && this.diagnostic.filesystem.fileEntry && this.diagnostic.filesystem.fileEntry.dataLength > 0 && this.diagnostic.filesystem.fileEntry.dataContents) {
                 let fileData = null;
+                let fileDataLast = null;
                 try {
                     this.diagnostic.file = {
                         filename: this.diagnostic.filesystem.fileEntry.filename,
@@ -1306,8 +1323,10 @@ export default class Ax3Device {
                         source: 'serial',
                     };
                     fileData = this.diagnostic.filesystem.fileEntry.dataContents;
+                    fileDataLast = this.diagnostic.filesystem.fileEntry.lastDataContents;
                 } catch (e) {
                     this.diagnostic.errors.push('Problem while reading data file: ' + JSON.stringify(e));
+console.dir(e.stack); debugger;
                 }
 
                 // First sector
@@ -1326,7 +1345,16 @@ export default class Ax3Device {
                     try {
                         this.diagnostic.first = parseData(new DataView(fileData, 2 * 512, 512));
                     } catch (e) {
-                        this.diagnostic.errors.push('Problem while parsing file data: ' + JSON.stringify(e));
+                        this.diagnostic.errors.push('Problem while parsing file data (first): ' + JSON.stringify(e));
+                    }
+                }
+
+                // Last sector - first data sector
+                if (fileDataLast && this.diagnostic.filesystem.fileEntry.dataLength >= 1 * 512) {
+                    try {
+                        this.diagnostic.last = parseData(new DataView(fileDataLast, 0, 512));
+                    } catch (e) {
+                        this.diagnostic.errors.push('Problem while parsing file data (last): ' + JSON.stringify(e));
                     }
                 }
             }
