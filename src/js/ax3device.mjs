@@ -943,7 +943,7 @@ export default class Ax3Device {
     }
     
     async readFilesystem() {
-        this.updateState('Reading filesystem');
+        this.updateState('Reading filesystem - please wait...');
         const filesystem = {};
         // MBR and first partition data
         filesystem.mbrSector = await this.readSector(0);

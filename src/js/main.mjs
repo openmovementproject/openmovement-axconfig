@@ -340,12 +340,13 @@ const updateEnabled = () => {
 }
 
 function updateDiagnostics() {
+    const isRunningDiagnostic = document.querySelector('body').classList.contains('running-diagnostic');
     const hasDevice = document.querySelector('body').classList.contains('device-connected');
     const hasDiagnostic = document.querySelector('#diagnostic-text').value.startsWith('{');
 
     console.log('DIAGNOSTICS: Update with device: ' + hasDevice + ' and diagnostic: ' + hasDiagnostic);
 
-    if (hasDevice) {
+    if (hasDevice && !isRunningDiagnostic) {
         document.querySelector('#diagnostic-run').removeAttribute('disabled');
         document.querySelector('#diagnostic-reset').removeAttribute('disabled');
     } else {
@@ -948,6 +949,7 @@ window.addEventListener('DOMContentLoaded', async (event) => {
         
     document.querySelector('#diagnostic-run').addEventListener('click', async () => {
         try {
+            document.querySelector('body').classList.add('running-diagnostic');
             document.querySelector('#diagnostic-run').setAttribute('disabled', 'true');
             document.querySelector('#diagnostic-reset').setAttribute('disabled', 'true');
             if (currentDevice) {
@@ -960,11 +962,13 @@ window.addEventListener('DOMContentLoaded', async (event) => {
         } finally {
             document.querySelector('#diagnostic-run').removeAttribute('disabled');
             document.querySelector('#diagnostic-reset').removeAttribute('disabled');
+            document.querySelector('body').classList.remove('running-diagnostic');
         }
     });
 
     document.querySelector('#diagnostic-reset').addEventListener('click', async () => {
         try {
+            document.querySelector('body').classList.add('running-diagnostic');
             document.querySelector('#diagnostic-run').setAttribute('disabled', 'true');
             document.querySelector('#diagnostic-reset').setAttribute('disabled', 'true');
             diagnosticResults('', null);
@@ -990,6 +994,7 @@ window.addEventListener('DOMContentLoaded', async (event) => {
         } finally {
             document.querySelector('#diagnostic-run').removeAttribute('disabled');
             document.querySelector('#diagnostic-reset').removeAttribute('disabled');
+            document.querySelector('body').classList.remove('running-diagnostic');
         }
     });
 
