@@ -1,8 +1,6 @@
 import { sleep, localTime, localTimeString } from './util.mjs';
 import { parseHeader, parseData } from './cwa_parse.mjs';
 
-const GLOBAL_TEMP_READ_LAST_SECTOR = !true;
-
 /*
 {
     '_c':   'StudyCentre',
@@ -805,15 +803,38 @@ export default class Ax3Device {
 
         // Follow chain from current cluster until we reach the required cluster index
         while (currentClusterIndex != newClusterIndex) {
-            console.log('READ-FILE: seeking after current cluster, following chain');
-            throw 'Seeking to an offset outside the first cluster is not yet implemented';
-            //file.currentCluster = (((read FAT entry at file.currentCluster)))
-            //currentClusterIndex++;
+            let newClusterIndex = null;
+            const entriesPerCluster = filesystem.sectorSize * 8 / filesystem.type;
+            const page = Math.floor(file.currentCluster / entriesPerCluster);
+            if (!filesystem.allocationTable) {
+                console.log('READ-FILE: creating new allocation table');
+                filesystem.allocationTable = [];
+            }
+            console.log('READ-FILE: Requesting FAT page ' + page);
+            if (!filesystem.allocationTable[page]) {
+                const sector = filesystem.firstFatSector + page;
+                console.log('READ-FILE: Cache miss, reading FAT page ' + page + ' at sector ' + sector);
+                const pageData = await this.readSector(sector);
+                filesystem.allocationTable[page] = pageData;
+            }
+            const clusterOffset = file.currentCluster % entriesPerCluster;
+            if (filesystem.type == 12) {
+                throw 'FAT12 not supported';
+            } else if (filesystem.type == 16) {
+                newClusterIndex = filesystem.allocationTable[page].getUint16(clusterOffset * 2, true);
+            } else if (filesystem.type == 32) {
+                newClusterIndex = filesystem.allocationTable[page].getUint32(clusterOffset * 4, true);
+            } else {
+                throw 'Filesystem type not supported: ' + filesystem.type;
+            }
+            console.log('READ-FILE: seeking after current cluster, following chain: #' + currentClusterIndex + ' ' + file.currentCluster + ' -> ' + newClusterIndex);
+            file.currentCluster = newClusterIndex;
+            currentClusterIndex++;
         }
 
         file.currentSectorWithinFile = seekSector;
         file.offsetWithinSector = offset % filesystem.sectorSize;
-        console.log('READ-FILE: seeking complete, sector ' + file.currentSectorWithinFile + ', offset ' + file.offsetWithinSector + '');
+        console.log('READ-FILE: seeking complete, sector ' + file.currentSectorWithinFile + ', offset ' + file.offsetWithinSector + ', clusterIndex=' + currentClusterIndex);
 
         return true;
     }
@@ -937,7 +958,7 @@ export default class Ax3Device {
         if (filesystem.sectorSize != 512) {
             throw 'Invalid sectorSize: ' + filesystem.sectorSize;
         }
-        filesystem.sectorsPerCluster = filesystem.bootSector.getUint8(13) * filesystem.sectorSize;   // 32 // 64
+        filesystem.sectorsPerCluster = filesystem.bootSector.getUint8(13);   // 32 // 64
         if (filesystem.sectorsPerCluster & (filesystem.sectorsPerCluster - 1)  != 0) {
             throw 'Invalid sectorsPerCluster: ' + filesystem.sectorsPerCluster;
         }
@@ -961,6 +982,21 @@ export default class Ax3Device {
         // First sector of the file area
         filesystem.firstSectorOfFileArea = filesystem.rootSectorNumber + Math.floor((32 * filesystem.numRootDirectoryEntries) / 512);
 
+        filesystem.sectorCapacity = filesystem.sectorCount - filesystem.firstSectorNumber;
+        filesystem.clusterCapacity = Math.ceil(filesystem.sectorCapacity / filesystem.sectorsPerCluster);
+        if (filesystem.clusterCapacity < 4085) {
+            filesystem.type = 12;
+        } else if (filesystem.clusterCapacity < 65525) {
+            filesystem.type = 16;
+        } else {
+            filesystem.type = 32;
+        }
+        if (filesystem.type == 32) {
+            // TODO: Verify this?
+            filesystem.rootSectorNumber = filesystem.firstSectorOfFileArea;
+        }
+        console.log('Filesystem: ' + filesystem.type + '-bit, ' + filesystem.sectorCapacity + ' sectors, ' + filesystem.clusterCapacity + ' clusters, ' + filesystem.sectorsPerCluster + ' sectors per cluster, ' + filesystem.clusterSize + ' bytes per cluster, ' + filesystem.numRootDirectoryEntries + ' root directory entries, ' + filesystem.firstSectorOfFileArea + ' first sector of file area, ' + filesystem.rootSectorNumber + ' first sector of root directory');
+
         // Read the first few sectors of the data file
         filesystem.fileEntry = await this.findFileEntry(filesystem, 'CWA-DATA.CWA');
 
@@ -970,7 +1006,6 @@ export default class Ax3Device {
 
         if (filesystem.fileEntry.dataLength >= 3 * 512) {
             // Read the last sector of the file
-if (GLOBAL_TEMP_READ_LAST_SECTOR)
             filesystem.fileEntry.lastDataContents = await this.readFile(filesystem, filesystem.fileEntry, filesystem.fileEntry.dataLength - 512, 512);
         }
    
@@ -1326,7 +1361,6 @@ if (GLOBAL_TEMP_READ_LAST_SECTOR)
                     fileDataLast = this.diagnostic.filesystem.fileEntry.lastDataContents;
                 } catch (e) {
                     this.diagnostic.errors.push('Problem while reading data file: ' + JSON.stringify(e));
-console.dir(e.stack); debugger;
                 }
 
                 // First sector
@@ -1361,6 +1395,11 @@ console.dir(e.stack); debugger;
 
             // Finish
             this.recalculateRecordingStatus();  // updateState
+
+            // Clean up
+            if (this.diagnostic.filesystem.allocationTable) {
+                delete this.diagnostic.filesystem.allocationTable;
+            }
 
             return this.diagnostic;
         } catch (e) {
