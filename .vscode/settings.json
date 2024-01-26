@@ -30,6 +30,7 @@
         "lsusb",
         "MAXSAMPLES",
         "minbattery",
+        "mitm",
         "MMDDDD",
         "mmssssss",
         "msapplication",
@@ -63,5 +64,6 @@
         "YYYYMMDD",
         "YYYYYYMM"
     ],
-    "cSpell.language": "en,en-GB,en-US,lorem"
+    "cSpell.language": "en,en-GB,en-US,lorem",
+    "liveServer.settings.port": 5501
 }
