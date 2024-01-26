@@ -209,12 +209,12 @@ export default class UsbDevice {
     }
 
 
-    async write(message) {
+    async write(message, quiet) {
 // HACK: This padding
 if (true && message.trim().length > 0) { message = ('\r' + message.trim() + '\r').padEnd(64, '\r'); }
-        console.log('SEND: ' + message.replace(/\r/g, '\\r').replace(/\n/g, '\\n').replace(/ /g, '☐'));
+        if (!quiet) console.log('SEND: ' + message.replace(/\r/g, '\\r').replace(/\n/g, '\\n').replace(/ /g, '☐'));
         let outBuffer = encoder.encode(message);
-        console.log('===: ' + outBuffer);
+        if (!quiet) console.log('===: ' + outBuffer);
         try {
             await this.device.transferOut(this.io.data.endpointWrite, outBuffer);
         } catch (e) {
@@ -225,12 +225,12 @@ if (true && message.trim().length > 0) { message = ('\r' + message.trim() + '\r'
 
 
     async read() {
-        console.log('Read...');
+        if (!quiet) console.log('Read...');
         let reply = null;
         try {
-            console.log(`...transferIn(${this.io.data.endpointRead})`);
+            if (!quiet) console.log(`...transferIn(${this.io.data.endpointRead})`);
             let result = await this.device.transferIn(this.io.data.endpointRead, 64);
-            console.log(`...transferIn() - done (${result.status}): ` + result);
+            if (!quiet) console.log(`...transferIn() - done (${result.status}): ` + result);
 
             if (result.status === 'stall') {
                 console.log('Endpoint stalled. Clearing.');
@@ -262,7 +262,7 @@ if (true && message.trim().length > 0) { message = ('\r' + message.trim() + '\r'
             console.log('WARNING: Problem reading data: ' + this.io.data.endpointRead + ' -- ' + e);
             return null;
         }
-        console.log('RECV: ' + (reply === null ? '<null>' : reply.replace(/\r/g, '\\r').replace(/\n/g, '\\n').replace(/ /g, '☐')));
+        if (!quiet) console.log('RECV: ' + (reply === null ? '<null>' : reply.replace(/\r/g, '\\r').replace(/\n/g, '\\n').replace(/ /g, '☐')));
 
         return reply;
     }

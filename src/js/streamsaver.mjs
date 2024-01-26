@@ -1,7 +1,12 @@
+// [!!!]
+import { WritableStream as WritableStreamPonyFill } from './web-streams-ponyfill.es2018.mjs';
+const ponyfill = { WritableStream: WritableStreamPonyFill };
+
 /*! streamsaver. MIT License. Jimmy Wärting <https://jimmy.warting.se/opensource> */
 
 /* global chrome location ReadableStream define MessageChannel TransformStream */
 
+/*[!!!]
 ;((name, definition) => {
   typeof module !== 'undefined'
     ? module.exports = definition()
@@ -10,21 +15,23 @@
       : this[name] = definition()
 })('streamSaver', () => {
   'use strict'
-
+*/
   const global = typeof window === 'object' ? window : this
   if (!global.HTMLElement) console.warn('streamsaver is meant to run on browsers main thread')
 
   let mitmTransporter = null
   let supportsTransferable = false
   const test = fn => { try { fn() } catch (e) {} }
+/* [!!!]
   const ponyfill = global.WebStreamsPolyfill || {}
+*/
   const isSecureContext = global.isSecureContext
   // TODO: Must come up with a real detection test (#69)
   let useBlobFallback = /constructor/i.test(global.HTMLElement) || !!global.safari || !!global.WebKitPoint
   const downloadStrategy = isSecureContext || 'MozAppearance' in document.documentElement.style
     ? 'iframe'
     : 'navigate'
-
+export // [!!!]
   const streamSaver = {
     createWriteStream,
     WritableStream: global.WritableStream || ponyfill.WritableStream,
@@ -312,6 +319,7 @@
       }
     }, opts.writableStrategy)
   }
-
+/*[!!!]
   return streamSaver
 })
+*/

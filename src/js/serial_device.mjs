@@ -37,9 +37,9 @@ export default class SerialDevice {
 
     internalRead({ done, value }) {
         try {
-console.log('*** ' + JSON.stringify({value, done}))
+//console.log('*** ' + JSON.stringify({value, done}))
             if (value !== null && typeof value !== 'undefined' && value.length > 0) {
-console.log('<<< [' + this.buffer.length + '] ' + value);
+//console.log('<<< [' + this.buffer.length + '] ' + value);
                 this.buffer.push(value);
             }
             if (done) {
@@ -138,10 +138,10 @@ console.log('<<< [' + this.buffer.length + '] ' + value);
         }
     }
 
-    async write(message) {
+    async write(message, quiet) {
 // HACK: This padding
 if (true && message.trim().length > 0) { message = ('\r' + message.trim() + '\r').padEnd(64, '\r'); }
-        console.log('SEND: ' + message.replace(/\r/g, '\\r').replace(/\n/g, '\\n').replace(/ /g, '☐'));
+        if (!quiet) console.log('SEND: ' + message.replace(/\r/g, '\\r').replace(/\n/g, '\\n').replace(/ /g, '☐'));
         try {
             if (this.writer) {
                 console.log('UNEXPECTED: Writer already exists');
@@ -165,8 +165,8 @@ if (true && message.trim().length > 0) { message = ('\r' + message.trim() + '\r'
     }
 
 
-    async read() {
-        console.log('Read... ' + this.buffer.length);
+    async read(quiet) {
+        if (!quiet) console.log('Read... ' + this.buffer.length);
         let reply = null;
         try {
             while (this.buffer.length > 0) {
@@ -177,7 +177,7 @@ if (true && message.trim().length > 0) { message = ('\r' + message.trim() + '\r'
             console.log('WARNING: Problem reading serial data: ' + e);
             return null;
         }
-        console.log('RECV: ' + (reply === null ? '<null>' : reply.replace(/\r/g, '\\r').replace(/\n/g, '\\n').replace(/ /g, '☐')));
+        if (!quiet) console.log('RECV: ' + (reply === null ? '<null>' : reply.replace(/\r/g, '\\r').replace(/\n/g, '\\n').replace(/ /g, '☐')));
         return reply;
     }
 

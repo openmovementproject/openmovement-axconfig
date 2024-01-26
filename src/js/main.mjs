@@ -348,9 +348,11 @@ function updateDiagnostics() {
 
     if (hasDevice && !isRunningDiagnostic) {
         document.querySelector('#diagnostic-run').removeAttribute('disabled');
+        document.querySelector('#diagnostic-data-download').removeAttribute('disabled');
         document.querySelector('#diagnostic-reset').removeAttribute('disabled');
     } else {
         document.querySelector('#diagnostic-run').setAttribute('disabled', "true");
+        document.querySelector('#diagnostic-data-download').setAttribute('disabled', "true");
         document.querySelector('#diagnostic-reset').setAttribute('disabled', "true");
     }
 
@@ -950,8 +952,7 @@ window.addEventListener('DOMContentLoaded', async (event) => {
     document.querySelector('#diagnostic-run').addEventListener('click', async () => {
         try {
             document.querySelector('body').classList.add('running-diagnostic');
-            document.querySelector('#diagnostic-run').setAttribute('disabled', 'true');
-            document.querySelector('#diagnostic-reset').setAttribute('disabled', 'true');
+            updateDiagnostics();
             if (currentDevice) {
                 const diagnostic = await currentDevice.runDiagnostic();
                 const label = (diagnostic && diagnostic.id && diagnostic.id.deviceId) ? diagnostic.id.deviceId : 'unknown';
@@ -960,17 +961,46 @@ window.addEventListener('DOMContentLoaded', async (event) => {
         } catch (e) {
             setResult(e, true);
         } finally {
-            document.querySelector('#diagnostic-run').removeAttribute('disabled');
-            document.querySelector('#diagnostic-reset').removeAttribute('disabled');
             document.querySelector('body').classList.remove('running-diagnostic');
+            updateDiagnostics();
         }
+    });
+    
+    document.querySelector('#diagnostic-data-download').addEventListener('click', async () => {
+        function duration(time) {
+            if (!time) return '-';
+            let result = '';
+            if (time >= 60 * 60) { result = result + Math.floor(time / 60 / 60) + 'h'; time = time - Math.floor(time / 60 / 60) * 60 * 60; }
+            if (time >= 60) { result = result + Math.floor(time / 60) + 'm'; time = time - Math.floor(time / 60) * 60; }
+            result = result + Math.floor(time) + 's';
+            return result;
+        }
+        
+        const message = 'Experimental, slow, data download...';
+        try {
+            document.querySelector('body').classList.add('running-diagnostic');
+            //diagnosticResults('', null);
+            if (!currentDevice) throw new Error('No device');
+            if (window.confirm('Run experimental (very slow) data download from device?')) {
+                currentDevice.updateState(message + ' - starting...');
+                await currentDevice.runDownload((progress) => {
+                    console.log(JSON.stringify(progress));
+                    currentDevice.updateState(message + ' - ' + (progress.proportion * 100).toFixed(3) + '%, after ' + duration(progress.elapsed) + ', remaining ' + duration(progress.estimatedRemaining) + '.');
+                });
+                currentDevice.updateState(message + ' - complete!');
+            }
+        } catch (e) {
+            currentDevice.updateState(message + ' - error');
+            setResult('Download error: ' + JSON.stringify(e), true);
+        } finally {
+            document.querySelector('body').classList.remove('running-diagnostic');
+            updateDiagnostics();
+        }        
     });
 
     document.querySelector('#diagnostic-reset').addEventListener('click', async () => {
         try {
             document.querySelector('body').classList.add('running-diagnostic');
-            document.querySelector('#diagnostic-run').setAttribute('disabled', 'true');
-            document.querySelector('#diagnostic-reset').setAttribute('disabled', 'true');
             diagnosticResults('', null);
             if (currentDevice) {
                 const wipeMessage = 'CAUTION: You want to DELETE ALL DATA from this device and RESET the device?';
@@ -992,9 +1022,8 @@ window.addEventListener('DOMContentLoaded', async (event) => {
         } catch (e) {
             setResult(e, true);
         } finally {
-            document.querySelector('#diagnostic-run').removeAttribute('disabled');
-            document.querySelector('#diagnostic-reset').removeAttribute('disabled');
             document.querySelector('body').classList.remove('running-diagnostic');
+            updateDiagnostics();
         }
     });
 

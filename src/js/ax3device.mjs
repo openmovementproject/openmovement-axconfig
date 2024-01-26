@@ -19,6 +19,106 @@ import { parseHeader, parseData } from './cwa_parse.mjs';
 };
 */
 
+import { streamSaver } from './streamsaver.mjs';
+
+let downloadScripts = false;
+async function download(filename, fileSize, callback) {
+    console.log('DOWNLOAD: start');
+
+    // Dynamically load scripts
+    if (!downloadScripts && downloadScripts !== false) {
+        console.log('DOWNLOAD: scripts need to be dynamically loaded');
+        const scriptSources = [
+            './streamsaver/web-streams-polyfill.min.js',
+            './streamsaver/StreamSaver.js',
+        ];
+        downloadScripts = [];
+        for (const scriptSource of scriptSources) {
+            const script = document.createElement('script');
+            script.type = 'text/javascript';
+            script.src = scriptSource;
+            script.promise = new Promise((resolve, reject) => {
+                script.onload = resolve;
+                script.onerror = reject;
+            });
+            document.body.prepend(script);
+            downloadScripts.push(script);
+        }
+    }
+
+    // Wait for all of the scripts to load
+    if (downloadScripts !== false) {
+        console.log('DOWNLOAD: waiting for scripts to be loaded');
+        await Promise.all(downloadScripts.map(script => script.promise));
+        console.log('DOWNLOAD: scripts loaded');
+    }
+
+    // const useIframe = 'isSecureContext' in window && isSecureContext;
+    // const usePopup = 'isSecureContext' in window && !isSecureContext;
+    // const useLocationHref = !useIframe;
+    // const useCrossOriginServiceWorker = new URL(streamSaver.mitm).origin !== window.origin;
+    // let useMessageChannel = false;
+    // let useTransformStream = false;
+    // let keepServiceWorkerAlive = false;
+    // try {
+    //   const { readable } = new TransformStream();
+    //   const mc = new MessageChannel();
+    //   mc.port1.postMessage(readable, [readable]);
+    //   mc.port1.close();
+    //   mc.port2.close();
+    //   useTransformStream = true;
+    // } catch (e) {
+    //   useMessageChannel = true;
+    //   keepServiceWorkerAlive = true;
+    // }
+
+    // Over HTTPS, use local version of MITM for SW -- otherwise, will fall back to github.io version
+    if (location.protocol == 'https:') {
+        streamSaver.mitm = './streamsaver/mitm.html';
+    }
+
+    const options = {};
+    if (fileSize !== null && fileSize >= 0) {
+        options.size = fileSize;
+    }
+
+    const fileStream = streamSaver.createWriteStream(filename, options);
+    let writer = fileStream.getWriter();
+
+    writer.fileSize = fileSize;
+
+    const abort = () => {
+        if (writer) {
+            callback(null);
+            writer.abort();
+            writer = null;
+        }
+    }
+
+    try {
+        window.addEventListener('unload', abort);
+        for (; ;) {
+            if (!writer) {
+                throw new Error('Writer is aborted');
+            }
+            // const byte = new TextEncoder().encode('!'); writer.write(byte);
+            const result = await callback(writer);
+            if (!result) {
+                break;
+            }
+        }
+        writer.close();
+    } catch (e) {
+        console.log('DOWNLOAD: error - ' + e);
+        abort();
+        throw e;
+    } finally {
+        window.removeEventListener('unload', abort);
+    }
+
+    return true;
+}
+
 function getSerialNumber(serial) {
     if (serial === undefined || serial === null) return null;
     serial = serial.trim();
@@ -53,7 +153,7 @@ class Command {
 
 
 class CommandState {
-    constructor(command) {
+    constructor(command, quiet = false) {
         this.started = (new Date()).getTime();
         this.command = command;
         this.promise = new Promise(
@@ -65,12 +165,13 @@ class CommandState {
         this.lines = [];
         this.completed = false;
         this.error = null;
+        this.quiet = quiet;
     }
 
     addResponse(line) {
         this.lines.push(line);
         const terminal = this.command.isTerminal(line);
-        console.log(`...now have ${this.lines.length} line(s) (terminal=${terminal})`);
+        if (!this.quiet) console.log(`...now have ${this.lines.length} line(s) (terminal=${terminal})`);
         if (terminal) {
             return true;
         }
@@ -91,7 +192,7 @@ class CommandState {
             this.error = e;
             this.reject(this);    
         } else {
-            console.log('COMMAND-RESOLVE');
+            if (!this.quiet) console.log('COMMAND-RESOLVE');
             this.completed = true;
             this.resolve(this);
         }
@@ -166,47 +267,47 @@ export default class Ax3Device {
         this.statusChanged();
     }
 
-    async exec(command) {
-        console.log(`exec() command=${command.output.replace(/[\r\n]/g, '|')} commandQueue.length=${this.commandQueue.length} currentCommand=${this.currentCommand} nextTick=${this.nextTick}`);
-        const commandState = new CommandState(command);
+    async exec(command, quiet = false) {
+        const commandState = new CommandState(command, quiet);
+        if (!commandState.quiet) console.log(`exec() command=${command.output.replace(/[\r\n]/g, '|')} commandQueue.length=${this.commandQueue.length} currentCommand=${this.currentCommand} nextTick=${this.nextTick}`);
         this.commandQueue.push(commandState);
         // Bootstrap required?
         if (this.currentCommand == null && this.nextTick == null) {
-            console.log('exec(): bootstrap');
+            if (!commandState.quiet) console.log('exec(): bootstrap');
             this.nextTick = setTimeout(async () => {
-                console.log('exec(): bootstrap...');
+                if (!commandState.quiet) console.log('exec(): bootstrap...');
                 await this.execNext();
-                console.log('exec(): bootstrap... done');
+                if (!commandState.quiet) console.log('exec(): bootstrap... done');
             }, 0);
         }
-        console.log('exec(): return');
+        if (!commandState.quiet) console.log('exec(): return');
         return commandState.promise;
     }
 
     async execNext() {
         try {
             this.nextTick = true;  // signify pending
-            console.log('execNext()');
+            //console.log('execNext()');
             // Write...
             if (this.currentCommand == null) {
-                console.log('execNext(): no command...');
+                //console.log('execNext(): no command...');
                 if (this.commandQueue.length <= 0) {
-                    console.log('execNext(): no more commands');
+                    //console.log('execNext(): no more commands');
                     this.nextTick = null;
                     return;
                 }
-                console.log('execNext(): getting next command...');
+                //console.log('execNext(): getting next command...');
                 this.currentCommand = this.commandQueue.shift();
                 if (this.currentCommand.command.timeout) {
-                    console.log('execNext(): setting up new timeout: ' + this.currentCommand.command.timeout);
+                    if (!this.currentCommand.quiet) console.log('execNext(): setting up new timeout: ' + this.currentCommand.command.timeout);
                     this.currentTimeout = setTimeout(this.timeout.bind(this), this.currentCommand.command.timeout);
                 } else {
                     console.log('execNext(): command has no timeout');
                 }
                 try {
-                    console.log('execNext(): write: ' + this.currentCommand.command.output.replace(/[\r\n]/g, '|'));
-                    await this.write(this.currentCommand.command.output);
-                    console.log('execNext(): write: (done)');
+                    if (!this.currentCommand.quiet) console.log('execNext(): write: ' + this.currentCommand.command.output.replace(/[\r\n]/g, '|'));
+                    await this.write(this.currentCommand.command.output, this.currentCommand.quiet);
+                    if (!this.currentCommand.quiet) console.log('execNext(): write: (done)');
                 } catch (e) {
                     console.log('execNext(): write: exception: ' + e);
                     this.commandComplete(e);
@@ -220,8 +321,8 @@ export default class Ax3Device {
                         console.log('execNext(): timeout before read');
                         this.commandComplete('Timeout before read');
                     } else {
-                        console.log('execNext(): read');
-                        data = await this.read();
+                        if (!this.currentCommand.quiet) console.log('execNext(): read');
+                        data = await this.read(this.currentCommand.quiet);
                     }
                 } catch (e) {
                     console.log('execNext(): read exception: ' + e);
@@ -230,28 +331,28 @@ export default class Ax3Device {
                 if (data === null && this.device.type === 'serial') {
                     if (data === null) {
                         // Seems to be some glitch in not delivering buffered content, new bytes incoming seem to help...
-                        await this.write('\r');
+                        await this.write('\r', this.currentCommand.quiet);
                         // Rather than tight poll on serial (where actual read is async)
                         await sleep(100);
                     }
                 }
                 if (this.currentCommand && data !== null) {
-                    console.log('execNext(): adding data ' + data.length);
+                    //console.log('execNext(): adding data ' + data.length);
                     this.receiveBuffer += data;
                     for (;;) {
                         const eol = this.receiveBuffer.indexOf('\n');
                         if (eol < 0) break;
                         const line = this.receiveBuffer.slice(0, eol).trim();
-                        console.log('LINE: ' + line);
+                        if (!this.currentCommand.quiet) console.log('LINE: ' + line);
                         this.receiveBuffer = this.receiveBuffer.slice(eol + 1);
                         if (this.currentCommand.addResponse(line)) {
-                            console.log('execNext(): end');
+                            if (!this.currentCommand.quiet) console.log('execNext(): end');
                             this.commandComplete();
                             break;
                         }
                     }
                 } else {
-                    console.log('execNext(): (no command or no data) ');
+                    //console.log('execNext(): (no command or no data) ');
                 }
             }
         } catch (e) {
@@ -259,11 +360,11 @@ export default class Ax3Device {
         }
         // Invoke again shortly
         this.nextTick = setTimeout(async () => {
-            console.log('execNext(): ...');
+            //console.log('execNext(): ...');
             await this.execNext();
-            console.log('execNext(): ... done');
+            //console.log('execNext(): ... done');
         }, 0);
-        console.log('execNext(): end');
+        //console.log('execNext(): end');
     }
 
     async timeout() {
@@ -291,7 +392,7 @@ export default class Ax3Device {
         if (e !== null) {
             console.log('commandComplete(): FAILED ' + e + ' -- ' + (this.currentCommand ? this.currentCommand.command.output : '-'));
         } else {
-            console.log('commandComplete(): SUCCESS -- ' + (this.currentCommand ? this.currentCommand.command.output : '-'));
+            if (!(this.currentCommand && this.currentCommand.quiet)) console.log('commandComplete(): SUCCESS -- ' + (this.currentCommand ? this.currentCommand.command.output : '-'));
         }
         if (this.currentTimeout) {
             clearTimeout(this.currentTimeout);
@@ -317,18 +418,18 @@ export default class Ax3Device {
     }
 
 
-    async write(message) {
-        await this.device.write(message);
+    async write(message, quiet) {
+        await this.device.write(message, quiet);
     }
 
 
-    async read() {
+    async read(quiet) {
         const timeoutPromise = new Promise((resolve, reject) => {
             this.rejectRead = reject;
         });
         return Promise.race([
             timeoutPromise,
-            this.device.read()
+            this.device.read(quiet)
         ]);
     }
 
@@ -716,8 +817,9 @@ export default class Ax3Device {
         const bytesPerLine = 16;
         const sectorSize = 512;
         const command = new Command(`\r\nREADL ${sectorNumber}\r\nECHO\r\n`, 'ECHO=', 10000);
-        console.log('>>> ' + command.output);
-        const result = await this.exec(command);
+        console.log(`>>> READL ${sectorNumber}`);
+        //console.log('>>> ' + command.output);
+        const result = await this.exec(command, true);
         if (!arrayBuffer) {
             arrayBuffer = new ArrayBuffer(sectorSize);
         }
@@ -775,17 +877,17 @@ export default class Ax3Device {
 
     // Seek to offset
     async fileSeek(filesystem, file, offset) {
-        console.log('READ-FILE: Seeking @' + offset);
+        //console.log('READ-FILE: Seeking @' + offset);
 
         // Seek within current sector does nothing
         const seekSector = Math.floor(offset / filesystem.sectorSize);
         if (seekSector == file.currentSectorWithinFile) {
-            console.log('READ-FILE: seeking within current sector');
+            //console.log('READ-FILE: seeking within current sector');
             return true;
         }
 
         // Otherwise, sector will be changing
-        console.log('READ-FILE: seeking outside current sector');
+        //console.log('READ-FILE: seeking outside current sector');
         file.currentSectorBuffer = null;
 
         // Determine current and new cluster indexes
@@ -794,12 +896,12 @@ export default class Ax3Device {
 
         // If seek before the current-cluster, start at beginning of the chain
         if (newClusterIndex < currentClusterIndex) {
-            console.log('READ-FILE: seeking before current cluster, starting at beginning of chain');
+            //console.log('READ-FILE: seeking before current cluster, starting at beginning of chain');
             currentClusterIndex = 0;
             file.currentCluster = file.dataFirstCluster;
         }
 
-        if (newClusterIndex == currentClusterIndex) console.log('READ-FILE: seeking within current cluster');
+        //if (newClusterIndex == currentClusterIndex) console.log('READ-FILE: seeking within current cluster');
 
         // Follow chain from current cluster until we reach the required cluster index
         while (currentClusterIndex != newClusterIndex) {
@@ -807,10 +909,10 @@ export default class Ax3Device {
             const entriesPerCluster = filesystem.sectorSize * 8 / filesystem.type;
             const page = Math.floor(file.currentCluster / entriesPerCluster);
             if (!filesystem.allocationTable) {
-                console.log('READ-FILE: creating new allocation table');
+                //console.log('READ-FILE: creating new allocation table');
                 filesystem.allocationTable = [];
             }
-            console.log('READ-FILE: Requesting FAT page ' + page);
+            //console.log('READ-FILE: Requesting FAT page ' + page);
             if (!filesystem.allocationTable[page]) {
                 const sector = filesystem.firstFatSector + page;
                 console.log('READ-FILE: Cache miss, reading FAT page ' + page + ' at sector ' + sector);
@@ -834,13 +936,13 @@ export default class Ax3Device {
 
         file.currentSectorWithinFile = seekSector;
         file.offsetWithinSector = offset % filesystem.sectorSize;
-        console.log('READ-FILE: seeking complete, sector ' + file.currentSectorWithinFile + ', offset ' + file.offsetWithinSector + ', clusterIndex=' + currentClusterIndex);
+        //console.log('READ-FILE: seeking complete, sector ' + file.currentSectorWithinFile + ', offset ' + file.offsetWithinSector + ', clusterIndex=' + currentClusterIndex);
 
         return true;
     }
 
     async fileRead(filesystem, file, maxSize, dataContents, index) {
-        console.log('READ-FILE: @maxSize=' + maxSize + ', current-offset=' + file.offsetWithinSector + ' / ' + filesystem.sectorSize);
+        //console.log('READ-FILE: @maxSize=' + maxSize + ', current-offset=' + file.offsetWithinSector + ' / ' + filesystem.sectorSize);
 
         // Ignore empty reads
         if (maxSize <= 0) return 0;
@@ -850,21 +952,21 @@ export default class Ax3Device {
             // Seek to start of next sector
             const newOffset = (file.currentSectorWithinFile + 1) * filesystem.sectorSize;
             await this.fileSeek(filesystem, file, newOffset);
-            console.log('READ-FILE: ...seek result @' + file.currentSectorWithinFile);
+            //console.log('READ-FILE: ...seek result @' + file.currentSectorWithinFile);
         }
 
         // Read in sector buffer, if not yet read
         if (file.currentSectorBuffer == null) {
             const sector = filesystem.firstSectorOfFileArea + (file.currentCluster - 2) * filesystem.sectorsPerCluster + (file.currentSectorWithinFile % filesystem.sectorsPerCluster);
             file.currentSectorBuffer = new ArrayBuffer(filesystem.sectorSize);
-            console.log('READ-SECTOR: ' + sector);
+            //console.log('READ-SECTOR: ' + sector);
             await this.readSector(sector, file.currentSectorBuffer, 0, filesystem.sectorSize);
         }
 
         if (maxSize > filesystem.sectorSize - file.offsetWithinSector) {
             maxSize = filesystem.sectorSize - file.offsetWithinSector;
         }
-        console.log('READ-FILE: Sub-reading @offset=' + file.offsetWithinSector + ' @index=' + index + ' sector #' + filesystem.firstSectorOfFileArea + (file.currentCluster - 2) * filesystem.sectorsPerCluster + (file.currentSectorWithinFile % filesystem.sectorsPerCluster) + ' maxSize=' + maxSize +'...');
+        //console.log('READ-FILE: Sub-reading @offset=' + file.offsetWithinSector + ' @index=' + index + ' sector #' + filesystem.firstSectorOfFileArea + (file.currentCluster - 2) * filesystem.sectorsPerCluster + (file.currentSectorWithinFile % filesystem.sectorsPerCluster) + ' maxSize=' + maxSize +'...');
 
         const bufferIn = new DataView(file.currentSectorBuffer, file.offsetWithinSector, maxSize);
         const bufferOut = new DataView(dataContents, index, maxSize);
@@ -874,7 +976,7 @@ export default class Ax3Device {
         }
         file.offsetWithinSector += maxSize;
 
-        console.log('READ-FILE: Sub-reading finished @offset=' + file.offsetWithinSector);
+        //console.log('READ-FILE: Sub-reading finished @offset=' + file.offsetWithinSector);
 
         return maxSize;
     }
@@ -926,12 +1028,14 @@ export default class Ax3Device {
         }
         if (maxSize === null) { maxSize = file.dataLength - offset; }
         if (maxSize > file.dataLength - offset) { maxSize = file.dataLength - offset; }
-        
-        console.log('READ-FILE: Maximum read: ' + maxSize + ' / ' + file.dataLength);
+
+        console.log('READ-FILE: @' + offset + '+' + maxSize);
+
+        //console.log('READ-FILE: Maximum read: ' + maxSize + ' / ' + file.dataLength);
         const dataContents = new ArrayBuffer(maxSize);
         let index = 0;
         for (;;) {
-            console.log('READ-FILE: Reading @index=' + index + '...');
+            //console.log('READ-FILE: Reading @index=' + index + '...');
             const read = await this.fileRead(filesystem, file, maxSize - index, dataContents, index);
             if (read <= 0) break;
             index += read;
@@ -942,7 +1046,7 @@ export default class Ax3Device {
         return dataContents;
     }
     
-    async readFilesystem() {
+    async readFilesystem(readEndOfFile) {
         this.updateState('Reading filesystem - please wait...');
         const filesystem = {};
         // MBR and first partition data
@@ -1004,7 +1108,7 @@ export default class Ax3Device {
         filesystem.fileEntry.dataContents = await this.readFile(filesystem, filesystem.fileEntry, 0, 3 * 512);
         filesystem.fileEntry.readLength = filesystem.fileEntry.dataContents.byteLength;
 
-        if (filesystem.fileEntry.dataLength >= 3 * 512) {
+        if (readEndOfFile && filesystem.fileEntry.dataLength >= 3 * 512) {
             // Read the last sector of the file
             filesystem.fileEntry.lastDataContents = await this.readFile(filesystem, filesystem.fileEntry, filesystem.fileEntry.dataLength - 512, 512);
         }
@@ -1221,7 +1325,7 @@ export default class Ax3Device {
             }
 
             if (config.noData) {
-                const filesystem = await this.tryAndRetry(() => this.readFilesystem());
+                const filesystem = await this.tryAndRetry(() => this.readFilesystem(false));
                 console.log('FILESYSTEM=' + JSON.stringify(filesystem));
                 if (filesystem.fileEntry && filesystem.fileEntry.dataLength && filesystem.fileEntry.dataLength > 1024) {
                     throw 'ERROR: Device has data on it.'
@@ -1283,6 +1387,88 @@ export default class Ax3Device {
         }
     }
 
+    async runDownload(progressCallback) {
+        const started = Date.now();
+        let lastCallback = null;
+        console.log('DOWNLOAD: Start...');
+        if (this.device.isBusy()) {
+            this.updateState(null, 'Device busy');
+            throw('ERROR: Device is busy');
+        }
+        try {
+            await this.tryAndRetry(() => this.open());
+
+            if (!this.diagnostic) this.diagnostic = {};
+            if (!this.diagnostic.filesystem) this.diagnostic.filesystem = await this.readFilesystem(false);
+    
+            if (!this.diagnostic.filesystem.fileEntry) {
+                throw 'Cannot find file.'
+            }
+    
+            const maxLen = this.diagnostic.filesystem.fileEntry.dataLength;
+            let filename = this.diagnostic.filesystem.fileEntry.filename;
+            filename = filename.replace('.CWA', '-' + this.status.id.deviceId + '.cwa');
+    
+            const result = await download(filename, maxLen, async (writer) => {
+                if (!writer) throw new Error('Writer is aborted - callback 1');
+                if (!writer.written) { writer.written = 0; }
+                const chunkSize = 16 * 512; // 8192
+                const dataRead = await this.readFile(this.diagnostic.filesystem, this.diagnostic.filesystem.fileEntry, writer.written, chunkSize);
+
+                if (!writer) throw new Error('Writer is aborted - callback 2');
+                console.log('DOWNLOAD: READ: ' + dataRead.byteLength );
+
+                //const bytes = new TextEncoder().encode('!');    // Uint8Array(1)  .buffer : ArrayBuffer(1)
+                const bytes = new Uint8Array(dataRead);
+                await writer.write(bytes);
+
+                if (!writer) throw new Error('Writer is aborted - callback 3');
+                writer.written += bytes.byteLength;
+                const unfinished =  writer.written < writer.fileSize;
+
+                const now = Date.now();
+                if (lastCallback === null || now - lastCallback >= 1000 || !unfinished) {
+                    const elapsed =  (now - started) / 1000;
+                    const written = writer.written;
+                    const proportion = (maxLen > 0) ? (written / maxLen) : 1;
+                    const bytesPerSecond = (elapsed > 2) ? (written / elapsed) : 0;
+                    const estimatedRemaining = (bytesPerSecond > 0) ? (maxLen - written) / bytesPerSecond : null;
+
+                    const callbackStatus = {
+                        elapsed,
+                        written,
+                        total: maxLen,
+                        proportion,
+                        complete: unfinished,
+                        bytesPerSecond,
+                        estimatedRemaining,
+                    };
+                    if (progressCallback) {
+                        progressCallback(callbackStatus);
+                    }
+                    lastCallback = now;
+                }
+
+                return unfinished;
+            });
+            console.log('DOWNLOAD: result=' + result);
+debugger;
+
+        } catch (e) {
+            if (e.error) {
+                this.updateState(null, `Error running diagnostic: ${e.error}`);
+                console.log('ERROR: Problem during diagnostic: ' + e.error);
+            } else {
+                this.updateState(null, `Error running diagnostic: ${e}`);
+                console.log('ERROR: Problem during diagnostic: ' + e);
+            }
+            throw e;
+        } finally {
+            await this.close();
+        }
+
+    }
+
     async runReset(deviceId) {
         //DEVICE=12345|TIME 2020-01-01 00:00:00|FORMAT QC|LED 5
         let resetConfig = {
@@ -1342,7 +1528,8 @@ export default class Ax3Device {
 
             // Read filesystem
             try {
-                this.diagnostic.filesystem = await this.readFilesystem();
+                const readEndOfFile = true;
+                this.diagnostic.filesystem = await this.readFilesystem(readEndOfFile);
             } catch (e) {
                 this.diagnostic.errors.push('Problem while getting filesystem information: ' + JSON.stringify(e));
             }
