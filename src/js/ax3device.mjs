@@ -74,7 +74,7 @@ async function download(filename, fileSize, callback) {
 
     // Over HTTPS, use local version of MITM for SW -- otherwise, will fall back to github.io version
     if (location.protocol == 'https:') {
-        streamSaver.mitm = './streamsaver/mitm.html';
+        //streamSaver.mitm = './streamsaver/mitm.html';
     }
 
     const options = {};
