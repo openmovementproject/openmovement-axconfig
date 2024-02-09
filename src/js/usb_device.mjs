@@ -224,7 +224,7 @@ if (true && message.trim().length > 0) { message = ('\r' + message.trim() + '\r'
     }
 
 
-    async read() {
+    async read(quiet) {
         if (!quiet) console.log('Read...');
         let reply = null;
         try {
