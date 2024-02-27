@@ -21,6 +21,15 @@ import { parseHeader, parseData } from './cwa_parse.mjs';
 
 import { streamSaver } from './streamsaver.mjs';
 
+function dump(value) {
+    // const result = {};
+    // result.hex = [...new Uint8Array(value.buffer ? value.buffer : value)].map(x => x.toString(16).padStart(2, '0')).join('');
+    // result.hexDump = result.hex.replace(/((?:[A-Za-z0-9]{2}){16})/g, '$1\n').trim().replace(/([A-Za-z0-9]{2})(?!\n)/g, '$1 ').trim();
+    // result.base64 = btoa(String.fromCharCode(...new Uint8Array(value.buffer ? value.buffer : value)));
+    // return result;
+    return [...new Uint8Array(value.buffer ? value.buffer : value)].map(x => x.toString(16).padStart(2, '0')).join(' ');
+}
+
 let downloadScripts = false;
 async function download(filename, fileSize, callback) {
     console.log('DOWNLOAD: start');
@@ -1533,6 +1542,15 @@ debugger;
             } catch (e) {
                 this.diagnostic.errors.push('Problem while getting filesystem information: ' + JSON.stringify(e));
             }
+
+            // Raw sectors
+            this.diagnostic.sectorDump = {};
+            if (this.diagnostic.filesystem) {
+                if (this.diagnostic.filesystem.mbrSector) this.diagnostic.sectorDump.mbrSector = dump(this.diagnostic.filesystem.mbrSector);
+                if (this.diagnostic.filesystem.bootSector) this.diagnostic.sectorDump.bootSector = dump(this.diagnostic.filesystem.bootSector);
+                if (this.diagnostic.filesystem.rootSector) this.diagnostic.sectorDump.rootSector = dump(this.diagnostic.filesystem.rootSector);
+                if (this.diagnostic.filesystem.allocationTable && this.diagnostic.filesystem.allocationTable[0]) this.diagnostic.sectorDump.allocationTable0 = dump(this.diagnostic.filesystem.allocationTable[0]);
+            }
             
             // Parse initial sector
             if (this.diagnostic.filesystem && this.diagnostic.filesystem.fileEntry && this.diagnostic.filesystem.fileEntry.dataLength > 0 && this.diagnostic.filesystem.fileEntry.dataContents) {
@@ -1546,6 +1564,9 @@ debugger;
                     };
                     fileData = this.diagnostic.filesystem.fileEntry.dataContents;
                     fileDataLast = this.diagnostic.filesystem.fileEntry.lastDataContents;
+
+                    this.diagnostic.sectorDump.dataContents = dump(this.diagnostic.filesystem.fileEntry.dataContents);
+                    this.diagnostic.sectorDump.lastDataContents = dump(this.diagnostic.filesystem.fileEntry.lastDataContents);
                 } catch (e) {
                     this.diagnostic.errors.push('Problem while reading data file: ' + JSON.stringify(e));
                 }
