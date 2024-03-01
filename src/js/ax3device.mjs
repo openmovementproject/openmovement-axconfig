@@ -1162,13 +1162,13 @@ export default class Ax3Device {
         let command;
         if (wipe === true) {
             this.updateState('Configuring: Wiping and committing');
-            command = new Command(`\r\nFORMAT WC\r\n`, 'COMMIT', 10000);
+            command = new Command(`\r\nFORMAT WC\r\n`, 'COMMIT', 15000);
         } else if (wipe === false) {
             this.updateState('Configuring: Erasing and committing');
-            command = new Command(`\r\nFORMAT QC\r\n`, 'COMMIT', 8000);
+            command = new Command(`\r\nFORMAT QC\r\n`, 'COMMIT', 12000);
         } else if (wipe === null) {
             this.updateState('Configuring: Committing');
-            command = new Command(`\r\nCommit\r\n`, 'COMMIT', 5000);
+            command = new Command(`\r\nCommit\r\n`, 'COMMIT', 8000);
         } else {
             throw 'ERROR: Unknown commit type.';
         }
@@ -1605,7 +1605,7 @@ debugger;
             this.recalculateRecordingStatus();  // updateState
 
             // Clean up
-            if (this.diagnostic.filesystem.allocationTable) {
+            if (this.diagnostic.filesystem && this.diagnostic.filesystem.allocationTable) {
                 delete this.diagnostic.filesystem.allocationTable;
             }
 
