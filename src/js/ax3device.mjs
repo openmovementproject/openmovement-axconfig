@@ -1566,7 +1566,9 @@ debugger;
                     fileDataLast = this.diagnostic.filesystem.fileEntry.lastDataContents;
 
                     this.diagnostic.sectorDump.dataContents = dump(this.diagnostic.filesystem.fileEntry.dataContents);
-                    this.diagnostic.sectorDump.lastDataContents = dump(this.diagnostic.filesystem.fileEntry.lastDataContents);
+                    if (fileDataLast) {
+                        this.diagnostic.sectorDump.lastDataContents = dump(this.diagnostic.filesystem.fileEntry.lastDataContents);
+                    }
                 } catch (e) {
                     this.diagnostic.errors.push('Problem while reading data file: ' + JSON.stringify(e));
                 }
