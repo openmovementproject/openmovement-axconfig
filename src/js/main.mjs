@@ -59,6 +59,7 @@ let showDebug = false;
 let domLoaded = false;
 let allowUsb = true;
 let allowSerial = true;
+let version = null;
 
 // Don't redirect console unless debug view is enabled (will require refresh if #debug added)
 let redirected = false;
@@ -855,6 +856,7 @@ function refresh() {
 function runFileDiagnostic(inputFilename, fileData) {
     console.log('FILE-DIAGNOSTICS: (' + fileData.byteLength + ' bytes) -- ' + inputFilename);
     const diagnostic = {};
+    diagnostic.version = version;
     diagnostic.errors = [];
     diagnostic.time = new Date();
     diagnostic.file = {
@@ -900,6 +902,9 @@ function runFileDiagnostic(inputFilename, fileData) {
 
 window.addEventListener('DOMContentLoaded', async (event) => {
     domLoaded = true;
+
+    version = document.querySelector('#version').textContent.split(/[ ]/)[0].trim();
+    document.querySelector('.version').textContent = version;
 
     deviceManager = new DeviceManager(allowUsb, allowSerial);
     keyInput = new KeyInput(codeInput);
@@ -954,8 +959,9 @@ window.addEventListener('DOMContentLoaded', async (event) => {
             document.querySelector('body').classList.add('running-diagnostic');
             updateDiagnostics();
             if (currentDevice) {
-                const diagnostic = await currentDevice.runDiagnostic();
+                let diagnostic = await currentDevice.runDiagnostic();
                 const label = (diagnostic && diagnostic.id && diagnostic.id.deviceId) ? diagnostic.id.deviceId : 'unknown';
+                diagnostic = { version, ...diagnostic };
                 diagnosticResults(diagnostic, label);
             }
         } catch (e) {
