@@ -997,36 +997,71 @@ export default class Ax3Device {
         }{}
 
         // Entry is space-padded 8.3 filename with no `.` separator
-        const parts = filename.split('.'); 
-        const ext = ((parts.length <= 1) ? '' : parts.pop()).trim().toUpperCase().slice(0, 3).padEnd(3, ' '); 
-        const fname = parts.join('').trim().toUpperCase().replace(/ /g, '').slice(0, 8).padEnd(8, ' '); 
-        const entry = fname + ext;
+        let entry = null;
+        if (filename != null) {
+            const parts = filename.split('.'); 
+            const ext = ((parts.length <= 1) ? '' : parts.pop()).trim().toUpperCase().slice(0, 3).padEnd(3, ' '); 
+            const fname = parts.join('').trim().toUpperCase().replace(/ /g, '').slice(0, 8).padEnd(8, ' '); 
+            entry = fname + ext;
+        }
 
         // Scan first sector of root directory (file must be within the first 16 entries of the root directory)
         const file = {};
-        file.filename = filename;
-        file.entry = entry;
+        if (filename != null) {
+            file.filename = filename;
+            file.entry = entry;
+            file.dataLength = null;
+            file.dataFirstCluster = null;
+        }
+        file.foundEntry = null;
         file.exists = false;
-        file.dataLength = null;
-        file.dataFirstCluster = null;
         for (let i = 0; i < 16; i++) {
             const offset = 32 * i;
+            const attributes = filesystem.rootSector.getUint8(offset + 11);
             let match = true;
-            for (let o = 0; o < entry.length; o++) {
-                if (filesystem.rootSector.getUint8(offset + o) != entry.charCodeAt(o)) {
-                    match = false;
-                    break;
+            if (entry != null) {        // match on filename
+                for (let o = 0; o < entry.length; o++) {
+                    if (filesystem.rootSector.getUint8(offset + o) != entry.charCodeAt(o)) {
+                        match = false;
+                        break;
+                    }
+                }
+            } else {                    // match volume label
+                if (attributes & (1 << 3)) {
+                    match = true;
                 }
             }
             if (match) {
                 file.exists = true;
-                file.dataFirstCluster = filesystem.rootSector.getUint16(offset + 26, true);
-                file.dataLength = filesystem.rootSector.getUint32(offset + 28, true);
+                file.foundEntry = '';
+                for (let o = 0; o < 11; o++) {
+                    file.foundEntry += String.fromCharCode(filesystem.rootSector.getUint8(offset + o));
+                }
+                file.attributes = attributes;
+
+                if (filename != null) {
+                    file.dataFirstCluster = filesystem.rootSector.getUint16(offset + 26, true);
+                    file.dataLength = filesystem.rootSector.getUint32(offset + 28, true);
+                }
+
+                const time = filesystem.rootSector.getUint16(offset + 22, true);    // Time (hhhhhmmm mmmsssss hours/minutes/double-seconds)
+                const date = filesystem.rootSector.getUint16(offset + 24, true);    // Date (YYYYYYYM MMMDDDDD year-since-1980/month/day)
+
+                // Convert FAT date/time to javascript date/time in UTC
+                const year = ((date >> 9) & 0x7F) + 1980;
+                const month = (date >> 5) & 0x0F;
+                const day = date & 0x1F;
+                const hours = (time >> 11) & 0x1F;
+                const minutes = (time >> 5) & 0x3F;
+                const seconds = (time & 0x1F) * 2;
+                file.timestamp = year.toString().padStart(4, '0') + '-' + month.toString().padStart(2, '0') + '-' + day.toString().padStart(2, '0') + 'T' + hours.toString().padStart(2, '0') + ':' + minutes.toString().padStart(2, '0') + ':' + seconds.toString().padStart(2, '0') + 'Z';
                 break;
             }
         }
 
-        this.fileReset(filesystem, file);
+        if (filename != null) {
+            this.fileReset(filesystem, file);
+        }
         return file;
     }
 
@@ -1110,7 +1145,10 @@ export default class Ax3Device {
         }
         console.log('Filesystem: ' + filesystem.type + '-bit, ' + filesystem.sectorCapacity + ' sectors, ' + filesystem.clusterCapacity + ' clusters, ' + filesystem.sectorsPerCluster + ' sectors per cluster, ' + filesystem.clusterSize + ' bytes per cluster, ' + filesystem.numRootDirectoryEntries + ' root directory entries, ' + filesystem.firstSectorOfFileArea + ' first sector of file area, ' + filesystem.rootSectorNumber + ' first sector of root directory');
 
-        // Read the first few sectors of the data file
+        // Find the drive volume
+        filesystem.volumeEntry = await this.findFileEntry(filesystem, null);
+
+        // Find the data file
         filesystem.fileEntry = await this.findFileEntry(filesystem, 'CWA-DATA.CWA');
 
         // Read the first few sectors of the file

@@ -186,7 +186,6 @@ export default class DeviceManager {
             if (!(port in this.serialDevices)) {
                 if (this.serialDevices.length > 0) {
                     console.log('WARNING: Only one serial device is supported at a time, but about to add another -- removing old.');
-debugger;
                     const oldPort = Object.keys(this.serialDevices)[0];
                     const oldAxDevice = this.serialDevices[oldPort];
                     if (this.changedHandler) this.changedHandler(oldAxDevice, oldPort, 'disconnect')
