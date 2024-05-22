@@ -1052,9 +1052,10 @@ export default class Ax3Device {
                 const month = (date >> 5) & 0x0F;
                 const day = date & 0x1F;
                 const hours = (time >> 11) & 0x1F;
-                const minutes = (time >> 5) & 0x3F;
-                const seconds = (time & 0x1F) * 2;
-                file.timestamp = year.toString().padStart(4, '0') + '-' + month.toString().padStart(2, '0') + '-' + day.toString().padStart(2, '0') + 'T' + hours.toString().padStart(2, '0') + ':' + minutes.toString().padStart(2, '0') + ':' + seconds.toString().padStart(2, '0') + 'Z';
+                const mins = (time >> 5) & 0x3F;
+                const secs = (time & 0x1F) * 2;
+                const timestamp = year.toString().padStart(4, '0') + '-' + month.toString().padStart(2, '0') + '-' + day.toString().padStart(2, '0') + 'T' + hours.toString().padStart(2, '0') + ':' + mins.toString().padStart(2, '0') + ':' + secs.toString().padStart(2, '0') + 'Z';
+                file.timestamp = timestamp;
                 break;
             }
         }
@@ -1499,8 +1500,6 @@ export default class Ax3Device {
                 return unfinished;
             });
             console.log('DOWNLOAD: result=' + result);
-debugger;
-
         } catch (e) {
             if (e.error) {
                 this.updateState(null, `Error running diagnostic: ${e.error}`);

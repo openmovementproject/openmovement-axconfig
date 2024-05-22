@@ -10,7 +10,9 @@ function readTimestamp(packedTimestamp) {
     const mins  = (packedTimestamp >>  6) & 0x3f;
     const secs  = (packedTimestamp >>  0) & 0x3f;
     try {
-        return new Date(Date.UTC(year, month - 1, day, hours, mins, secs));
+        //return new Date(Date.UTC(year, month - 1, day, hours, mins, secs));
+        const timestamp = year.toString().padStart(4, '0') + '-' + month.toString().padStart(2, '0') + '-' + day.toString().padStart(2, '0') + 'T' + hours.toString().padStart(2, '0') + ':' + mins.toString().padStart(2, '0') + ':' + secs.toString().padStart(2, '0') + 'Z';
+        return timestamp;
     } catch (e) {
         console.log('WARNING: Invalid date: ' + e);
         return null;
