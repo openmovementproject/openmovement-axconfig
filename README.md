@@ -33,6 +33,22 @@ Android is not a supported platform for the *Web Serial API* (as there is not a 
 Although not currently used by the configuration tool, an additional approach would be to use a local native binary for device communication and for the web page to talk to this service either through a WebExtension using Native Messaging, and/or by running a local server over HTTP(S)/WebSocket (although this approach has difficulties with some APIs needing to be run over HTTPS, while `localhost` is not considered secure by all browsers without trusting a generated, self-signed certificate).
 
 
+## Connection troubleshooting
+
+If you have difficulties connecting a device (such as a `Could not claim interface` error) you should:
+
+1. Ensure you are using a web browser that supports *WebSerial*/*WebUSB*, such as *Chrome* or *Edge*.
+2. Be sure to close any other programs that will try to communicate with the devices (such as *Om GUI*)
+3. Reset device access methods -- **revoke existing device access:**
+    1. Visit the configuration page
+    2. On the page, press the *View site information* icon to the left of the website address, marked `ⓘ`.
+    3. For all permissions labelled *AX3 Composite Device* or *AX6 Composite Device*: 
+       * Press the *Revoke Access* button to the right, marked `✖` or `⏏`.  
+    4. Press the `↺` *Refresh* link at the very bottom of the page.
+4. Be sure to use the *Connect serial device...* button to communicate with the device.  Only try the *Alternative connect device...* if the serial method does not work, e.g. on some *Android* devices (and you may need to check the instructions above under *How it communicates* and try the alternative firmware for the AX3).
+5. If there are still connection issues, see the [AX Troubleshooting](https://github.com/digitalinteraction/openmovement/blob/master/Docs/ax3/ax3-troubleshooting.md) guide.
+
+
 ## URL-based options
 
 Options can be added to the address by appending a hash (`#`) then `key=value` pairs separated with an ampersand (`&`).  In special circumstances, you can place options after a question mark (`?`), but changing these must be done online as this will cause the page to be reloaded -- an advantage of this is that this URL can be stored to a home screen shortcut while keeping the custom options.  The options are:
@@ -64,23 +80,13 @@ Options can be added to the address by appending a hash (`#`) then `key=value` p
 The web application is cached so that it works offline.  In Chrome-based browsers, see `chrome://serviceworker-internals` (or `chrome://appcache-internals/` for earlier versions of this application).  The application is also a *Progressive Web App* and can be installed to the user's desktop/home screen/launcher.
 
 
-## Configuration Logs
+## Configuration logs
 
 Logs are stored locally in the browser.  The following options affect the logs: `nolog`, remove log buttons; `nologclear`, remove *Clear Log* button.  When *Download Log* is clicked, the downloaded log file is in *.CSV* format. Times are local and in the format `YYYY-MM-DD hh:mm:ss`. The *type* reports success/failure and is `AX3-CONFIG-OK`/`AX3-CONFIG-FAILURE` (final configuration check did not match)/`AX3-CONFIG-ERROR` (or `AX6-` prefixed). The line format is:
 
 ```
 time,type,deviceId,sessionId,start,stop,frequency,range,"metadata",gyroRange,"subjectCode"
 ```
-
-
-## Revoke device access
-
-To reset device access:
-
-1. Press the *View site information* icon to the left of the website address, marked `ⓘ`.
-2. For all permissions labelled *AX3 Composite Device* or *AX6 Composite Device*: 
-   * Press the *Revoke Access* button to the right, marked `✖` or `⏏`.  
-3. Finally, press the `↺` *Refresh* link at the bottom of the page.
 
 
 <!--
