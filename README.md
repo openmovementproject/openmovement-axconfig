@@ -46,7 +46,9 @@ If you have difficulties connecting a device (such as a `Could not claim interfa
        * Press the *Revoke Access* button to the right, marked `✖` or `⏏`.  
     4. Press the `↺` *Refresh* link at the very bottom of the page.
 4. Be sure to use the *Connect serial device...* button to communicate with the device.  Only try the *Alternative connect device...* if the serial method does not work, e.g. on some *Android* devices (and you may need to check the instructions above under *How it communicates* and try the alternative firmware for the AX3).
-5. If there are still connection issues, see the [AX Troubleshooting](https://github.com/digitalinteraction/openmovement/blob/master/Docs/ax3/ax3-troubleshooting.md) guide.
+5. Once connected, you should be able to complete any configuration/diagnostics as required.
+
+If there are connection issues that prevent you from completing the above steps, please see the [AX Troubleshooting](https://github.com/digitalinteraction/openmovement/blob/master/Docs/ax3/ax3-troubleshooting.md) guide.
 
 
 ## URL-based options
