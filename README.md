@@ -50,6 +50,14 @@ If you have difficulties connecting a device (such as a `Could not claim interfa
 
 If there are connection issues that prevent you from completing the above steps, please see the [AX Troubleshooting](https://github.com/digitalinteraction/openmovement/blob/master/Docs/ax3/ax3-troubleshooting.md) guide.
 
+**Configuration on Linux:** (including Debian and Ubuntu)
+1. Using the *Chromium* browser, change the flags using the URL: `about:flags`, enabling:
+  * `Automatic detection of WebUSB-compatible devices`
+  * `Enable Isolated Web Apps to bypass USB restrictions`
+2. Make the user member of group `dialout`: `sudo usermod -a -G dialout $USER`
+3. Restart *X*, e.g. `sudo service lightdm restart`
+4. Configure the AX device via the serial port (`/dev/ttyACM*`).
+
 
 ## URL-based options
 
