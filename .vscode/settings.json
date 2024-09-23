@@ -24,6 +24,7 @@
         "DEVICECHANGED",
         "DEVICEMANAGER",
         "digitalinteraction",
+        "hhhhhmmm",
         "hhhhmmmm",
         "KEYINPUT",
         "localstorage",
@@ -32,6 +33,8 @@
         "minbattery",
         "mitm",
         "MMDDDD",
+        "MMMDDDDD",
+        "mmmsssss",
         "mmssssss",
         "msapplication",
         "nandid",
@@ -65,7 +68,8 @@
         "webconfig",
         "webusb",
         "YYYYMMDD",
-        "YYYYYYMM"
+        "YYYYYYMM",
+        "YYYYYYYM"
     ],
     "cSpell.language": "en,en-GB,en-US,lorem",
     "liveServer.settings.port": 5501
