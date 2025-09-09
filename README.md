@@ -72,7 +72,7 @@ Options can be added to the address by appending a hash (`#`) then `key=value` p
 * `rate=100` - sensor rate (Hz, default `100`, allowed `12.5|25|50|100|200|400|800|1600|3200`)
 * `range=8` - sensor range (*g*, default `8`, allowed `2|4|8|16`)
 * `gyro=0` - gyro sensitivity (*dps*, default `0`=none, allowed `250|500|1000|2000`)
-* `start=0` - delay until start from current time (hours, default `0`); or an exact start time (`YYYY-MM-DDThh:mm:ss`; add a `Z` suffix to use UTC, otherwise in local time). Negative values are treated as hours after the previous midnight in local time.  For example, `-20`=8pm today's evening; `-24`=midnight tonight; `-32`=8am tomorrow morning.
+* `start=0` - delay until start from current time (hours, default `0`); or an exact start time (`YYYY-MM-DDThh:mm:ss`; add a `Z` suffix to use UTC, otherwise in local time). Negative values are treated as (positive) hours after the previous midnight in local time.  For example, `-20`=8pm today's evening; `-24`=midnight tonight; `-32`=8am tomorrow morning.
 * `stop=168` - duration of recording (hours, default 168); or an exact stop time (`YYYY-MM-DDThh:mm:ss`; add a `Z` suffix to use UTC, otherwise in local time).
 * `metadata=` - metadata to add to the recording (use URL-encoded format which will need double-escaping in a URL; a subject code `_sc` will also be added from the `config` value)
 * `minbattery=80` - minimum battery percentage at configuration time (configuration will fail unless the device is at this level, default none).
@@ -97,6 +97,25 @@ Logs are stored locally in the browser.  The following options affect the logs: 
 ```
 time,type,deviceId,sessionId,start,stop,frequency,range,"metadata",gyroRange,"subjectCode"
 ```
+
+
+## Manually downloading data
+
+> [!NOTE]
+> The configuration tool does not properly support downloading data as it is only connected via the configuration serial port, and not the mass storage device connection that the data is available through.  There is an experimental option to download the file using the device's raw sector reads over its communication channel, requiring the web page to parse the filesystem directly, but this is only really intended for checking the device configuration, and is far, far to slow for typical recordings.
+
+When you connect a device to your computer, you should see it appear as an external drive (e.g. in Windows *Explorer* or macOS *Finder*).  If you open the drive, you should see the recorded data file `CWA-DATA.CWA`, which you may copy off to another location on your computer.  This transfer will typically take many minutes.  It would be a good idea to rename the file (keeping the `.cwa` file extension) to a unique filename (e.g. based on the session ID, device ID or date), to make sure the file can be identified later and that you do not overwrite a file with one of the same name.
+
+Advanced users may run [cwa_metadata.py](https://raw.githubusercontent.com/digitalinteraction/openmovement/master/Software/AX3/cwa-convert/python/cwa_metadata.py) to examine the metadata from a `.cwa` file, such as the session ID.  
+
+If you have any issues with the device data, please see: [AX Troubleshooting: Filesystem or data problems](https://github.com/openmovementproject/openmovement/blob/master/Docs/ax3/ax3-troubleshooting.md#filesystem-or-data-problems).
+
+
+## Data analysis
+
+Please see:
+
+* [AX Devices for Physical Activity Research: Data Analysis](https://github.com/openmovementproject/openmovement/blob/master/Docs/ax3/ax3-research.md#data-analysis)
 
 
 <!--
